@@ -42,7 +42,7 @@ final class PluginsStateProviderTest extends TestCase
         return new PluginRecord(
             name: $name,
             version: '1.0.0',
-            author: 'TeamX',
+            author: 'Acme',
             site: 'https://teamx.agency',
             type: 'Service',
             installed: true,

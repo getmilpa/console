@@ -64,6 +64,7 @@ final class CliProjector implements SurfaceProjector
             $flags[$nombre] = [
                 'type' => \is_string($definicion['type'] ?? null) ? $definicion['type'] : 'string',
                 'required' => \in_array($nombre, $obligatorias, true),
+                'description' => \is_string($definicion['description'] ?? null) ? $definicion['description'] : '',
             ];
         }
 

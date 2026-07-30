@@ -29,7 +29,13 @@ use Milpa\Command\SurfaceModel;
  */
 final readonly class CliCommandModel implements SurfaceModel
 {
-    /** @param array<string, array{type: string, required: bool}> $flags */
+    /**
+     * Cada bandera lleva su DESCRIPCIÓN además de su tipo, porque describir la superficie es el
+     * trabajo del modelo y una ayuda sin texto obliga a leer el código para saber qué se pide. El
+     * esquema de la operación ya la trae; no llevarla aquí la tiraba en la proyección.
+     *
+     * @param array<string, array{type: string, required: bool, description: string}> $flags
+     */
     public function __construct(
         public string $name,
         public string $description,

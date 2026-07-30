@@ -44,6 +44,16 @@ final class CliProjectorTest extends TestCase
         self::assertSame(['title' => 'Hi', 'priority' => 3], $input);
     }
 
+    /**
+     * El resultado ya no se codifica aquí: se le entrega al renderer, y el default de una terminal
+     * es texto para una persona.
+     *
+     * Esta prueba afirmaba `['{"got":{"n":42}}']` y no porque alguien hubiera elegido JSON, sino
+     * porque `json_encode` era el único camino que existía para un resultado no-escalar. Elegir el
+     * formato es de quien materializa; para pedir aquel JSON de vuelta está
+     * {@see \Milpa\Console\Tests\Rendering\RendererSwapTest}, que lo obtiene cambiando el renderer y
+     * sin tocar nada más.
+     */
     public function testRunInvokesTheHandlerWithCoercedInputAndRendersResult(): void
     {
         $lines = [];
@@ -57,7 +67,47 @@ final class CliProjectorTest extends TestCase
         });
 
         self::assertSame(0, $code);
-        self::assertSame(['{"got":{"n":42}}'], $lines);
+        self::assertSame(['got:', '  n: 42'], $lines);
+    }
+
+    /**
+     * Una entrada declarada `array` se arma repitiendo la bandera.
+     *
+     * El protocolo de tokens no podía transportar una lista: la bolsa cruda sólo producía cadenas y
+     * la rama `array` del coercer exige un arreglo ya hecho, así que una entrada repetible era
+     * imposible de satisfacer desde una terminal. Se descubrió al ir a convertir un comando con
+     * filtros repetibles, no antes.
+     */
+    public function testRepeatedFlagsBecomeAListWhenTheSchemaSaysArray(): void
+    {
+        $op = new Operation('history', 'History', static fn (array $i): array => $i, inputSchema: [
+            'type' => 'object',
+            'properties' => [
+                'producer' => ['type' => 'array'],
+                'actor' => ['type' => 'string'],
+            ],
+        ]);
+
+        $input = $this->projector->deriveInput($op, ['--producer=a', '--producer=b', '--actor=x', '--actor=y']);
+
+        self::assertSame(['producer' => ['a', 'b'], 'actor' => 'y'], $input, 'una lista acumula; un escalar gana el último');
+    }
+
+    /**
+     * Una sola aparición TAMBIÉN llega como lista.
+     *
+     * La forma la decide el ESQUEMA y no cuántas veces se escribió la bandera. Si dependiera de eso,
+     * el consumidor tendría que aceptar las dos formas, y ahí nace el `is_array()` defensivo que
+     * este tipado existe para evitar.
+     */
+    public function testASingleOccurrenceIsStillAList(): void
+    {
+        $op = new Operation('history', 'History', static fn (array $i): array => $i, inputSchema: [
+            'type' => 'object',
+            'properties' => ['producer' => ['type' => 'array']],
+        ]);
+
+        self::assertSame(['producer' => ['solo-uno']], $this->projector->deriveInput($op, ['--producer=solo-uno']));
     }
 
     public function testNullSchemaKeepsTheRawStringBag(): void
@@ -146,7 +196,10 @@ final class CliProjectorTest extends TestCase
             handler: static fn (array $i): array => $i,
             inputSchema: [
                 'type' => 'object',
-                'properties' => ['title' => ['type' => 'string'], 'draft' => ['type' => 'boolean']],
+                'properties' => [
+                    'title' => ['type' => 'string', 'description' => 'El título'],
+                    'draft' => ['type' => 'boolean'],
+                ],
                 'required' => ['title'],
             ],
         );
@@ -155,9 +208,11 @@ final class CliProjectorTest extends TestCase
 
         self::assertSame('cli', $modelo->surface());
         self::assertSame('crear_post', $modelo->name);
+        // La descripción viaja en el modelo; una propiedad que no la declara llega vacía, no ausente
+        // — una llave que a veces está obliga a defenderse de ella en cada consumidor.
         self::assertSame([
-            'title' => ['type' => 'string', 'required' => true],
-            'draft' => ['type' => 'boolean', 'required' => false],
+            'title' => ['type' => 'string', 'required' => true, 'description' => 'El título'],
+            'draft' => ['type' => 'boolean', 'required' => false, 'description' => ''],
         ], $modelo->flags);
         self::assertFalse($modelo->needsSignature);
     }

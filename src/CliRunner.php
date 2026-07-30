@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace Milpa\Console;
 
 use Milpa\Command\Operation;
+use Milpa\Console\Rendering\CliRenderer;
+use Milpa\Console\Rendering\PlainTextCliRenderer;
 use Milpa\Interfaces\Di\DIContainerInterface;
 use Milpa\ToolRuntime\Identity\FileNonceLedger;
 use Milpa\ToolRuntime\Identity\GnupgSignatureVerifier;
@@ -34,13 +36,26 @@ use Milpa\ToolRuntime\Identity\OperationAuthorizer;
  * pertenece ni a la proyección ni a la materialización. Vive en el eje `Intent → Policy → Signer`,
  * que ADR-0035 declara explícitamente fuera de su alcance. Sacarla es una decisión con su propio
  * ADR; mientras tanto queda nombrada aquí para que nadie la confunda con parte de ejecutar.
+ *
+ * Y por eso mismo la compuerta CONSERVA SU PROPIA VOZ: sus mensajes no pasan por el renderer. No es
+ * un descuido — enrutarlos hoy congelaría su ubicación, porque un renderer que sabe pintar una
+ * negativa de consentimiento es un renderer que da por sentado que el consentimiento vive aquí. Lo
+ * que sí pasa por el renderer es lo que SÍ es de esta clase: el resultado de la operación y las
+ * fallas de derivar su entrada. Queda dicho para que la diferencia se vea, no para que se olvide.
  */
 final class CliRunner
 {
+    /**
+     * El renderer es un default y no una dependencia obligatoria: un host que sólo quiere correr
+     * operaciones no debería tener que elegir formato para empezar. Cambiarlo por
+     * {@see \Milpa\Console\Rendering\JsonCliRenderer} no toca ni esta clase ni el projector, que es
+     * exactamente lo que la segunda cláusula de ADR-0035 pide poder hacer.
+     */
     public function __construct(
         private readonly SchemaCoercer $coercer = new SchemaCoercer(),
         private readonly ?OperationSigner $signer = null,
         private readonly ?OperationAuthorizer $authorizer = null,
+        private readonly CliRenderer $renderer = new PlainTextCliRenderer(),
     ) {
     }
 
@@ -116,7 +131,7 @@ final class CliRunner
      */
     public function deriveInput(Operation $op, array $argv): array
     {
-        return $this->coercer->coerce($op->inputSchema ?? [], $this->rawBag($argv));
+        return $this->coercer->coerce($op->inputSchema ?? [], $this->rawBag($argv, $op->inputSchema ?? []));
     }
 
     /**
@@ -135,7 +150,9 @@ final class CliRunner
         try {
             $input = $op->inputSchema !== null ? $this->deriveInput($op, $argv) : $this->rawBag($argv);
         } catch (SchemaCoercionException $e) {
-            $out('✗ ' . $e->getMessage());
+            foreach ($this->renderer->presentError($e->getMessage()) as $linea) {
+                $out($linea);
+            }
 
             return 1;
         }
@@ -159,7 +176,9 @@ final class CliRunner
             [$class, $method] = $handler;
             $instance = $container->get($class);
             if (!\is_object($instance)) {
-                $out("✗ command '{$op->name}': {$class} did not resolve to an object.");
+                foreach ($this->renderer->presentError("command '{$op->name}': {$class} did not resolve to an object.") as $linea) {
+                    $out($linea);
+                }
 
                 return 1;
             }
@@ -167,31 +186,88 @@ final class CliRunner
             $result = $instance->{$method}($input);
         }
 
+        // Un entero sigue siendo un CÓDIGO DE SALIDA y no un resultado que pintar: es la convención
+        // con que un handler dice «ya reporté yo». Todo lo demás va al renderer, incluido `null` —
+        // que devuelve cero líneas, no una línea vacía.
         if (\is_int($result)) {
             return $result;
         }
-        if ($result !== null) {
-            $out(\is_string($result) ? $result : (string) \json_encode($result));
+
+        $ok = $this->veredicto($result);
+        foreach ($this->renderer->present($result, $ok) as $linea) {
+            $out($linea);
         }
 
-        return 0;
+        return $ok ? 0 : 1;
     }
 
     /**
-     * @param list<string> $argv
+     * El veredicto de una invocación, leído del resultado.
      *
-     * @return array<string, string>
+     * Un `ok` booleano en la raíz del resultado ES el veredicto. No es una convención inventada
+     * aquí: es la que la familia ya usaba —`{"ok": …}` en la salida `--json` de los comandos del
+     * host, en `SecurityAuditTools`, en la envoltura de {@see \Milpa\Console\Rendering\JsonCliRenderer}—
+     * y lo único nuevo es que ahora se HONRA en vez de ignorarse.
+     *
+     * Que se ignorara costaba caro y en silencio: una operación de diagnóstico que reportaba
+     * `ok: false` salía con código 0, así que un CI que la corría pasaba en verde sobre un
+     * manifiesto inválido. El comando de Symfony al que sustituye devolvía `FAILURE` en ese caso, y
+     * perder eso al volverlo átomo habría convertido una migración en una regresión invisible.
+     *
+     * Un resultado SIN `ok` es un acierto: la mayoría de las operaciones devuelven datos y no
+     * veredictos, y exigirles la llave las obligaría a hablar de códigos de salida — o sea a saber
+     * que existe una terminal.
      */
-    private function rawBag(array $argv): array
+    private function veredicto(mixed $result): bool
     {
+        if (\is_array($result) && \array_key_exists('ok', $result) && \is_bool($result['ok'])) {
+            return $result['ok'];
+        }
+
+        return true;
+    }
+
+    /**
+     * Los tokens `--clave=valor` como bolsa cruda, consultando el esquema para saber qué se repite.
+     *
+     * Una bandera que aparece dos veces gana la última, SALVO que su propiedad esté declarada
+     * `type: array` — entonces se acumulan en una lista. Sin esta consulta el protocolo de tokens no
+     * podía transportar una lista en absoluto: la bolsa sólo producía cadenas y la rama `array` del
+     * coercer exige un arreglo ya hecho, así que una entrada repetible quedaba imposible de
+     * satisfacer desde una terminal. Se descubrió al convertir un comando con filtros repetibles.
+     *
+     * Que la forma dependa del ESQUEMA y no de cuántas veces se escribió la bandera es deliberado:
+     * `--producer=a` con una sola aparición tiene que llegar como lista de uno, o el consumidor
+     * tendría que aceptar las dos formas y ahí nace el `is_array()` defensivo de siempre.
+     *
+     * @param list<string>         $argv
+     * @param array<string, mixed> $inputSchema
+     *
+     * @return array<string, string|list<string>>
+     */
+    private function rawBag(array $argv, array $inputSchema = []): array
+    {
+        /** @var array<string, array<string, mixed>> $propiedades */
+        $propiedades = \is_array($inputSchema['properties'] ?? null) ? $inputSchema['properties'] : [];
+
         $bag = [];
         foreach ($argv as $token) {
             if (!str_starts_with($token, '--')) {
                 continue;
             }
-            $body = substr($token, 2);
-            [$key, $value] = str_contains($body, '=') ? explode('=', $body, 2) : [$body, '1'];
-            $bag[$key] = $value;
+            $cuerpo = substr($token, 2);
+            [$clave, $valor] = str_contains($cuerpo, '=') ? explode('=', $cuerpo, 2) : [$cuerpo, '1'];
+
+            if (($propiedades[$clave]['type'] ?? null) === 'array') {
+                /** @var list<string> $previo */
+                $previo = \is_array($bag[$clave] ?? null) ? $bag[$clave] : [];
+                $previo[] = $valor;
+                $bag[$clave] = $previo;
+
+                continue;
+            }
+
+            $bag[$clave] = $valor;
         }
 
         return $bag;

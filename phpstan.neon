@@ -1,0 +1,24 @@
+parameters:
+    level: 6
+    paths:
+        - src
+
+    ignoreErrors:
+        # Desviación declarada, con su razón — la única de este paquete.
+        #
+        # `trait.unused` es una regla de código cerrado: PHPStan la dispara cuando ningún archivo
+        # analizado usa el trait. `SignsOperations` no tiene ni debe tener usuario aquí: existe para
+        # que un CONSUMIDOR ejerza el gate de firma sin una llave real, y su consumidor real es
+        # `milpa/skeleton`, que es otro paquete y por lo tanto invisible a este análisis.
+        #
+        # No es duplicado de lo que ya cubre `CliProjectorSignatureGateTest`: ese arma dobles
+        # PARAMETRIZABLES —firma vieja, argumentos alterados, nonce gastado— porque su trabajo es
+        # ejercer las negativas del gate. El trait ofrece el par de camino feliz, que es lo que
+        # necesita quien sólo quiere pasar la puerta para probar otra cosa.
+        #
+        # Vive en `src/Testing/` y no en `tests/` porque Composer no autocarga el `autoload-dev` de
+        # una dependencia: un trait de pruebas en `tests/` es inalcanzable para quien consume el
+        # paquete. Publicarlo es la única forma de que sirva.
+        -
+            identifier: trait.unused
+            path: src/Testing/SignsOperations.php

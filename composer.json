@@ -1,0 +1,51 @@
+{
+  "name": "milpa/console",
+  "description": "The projection layer of the Milpa PHP framework: surface projectors that turn one declared Operation into the shape each surface speaks \u2014 CLI flags, MCP tools \u2014 plus the signature gate that makes consent name the call.",
+  "keywords": [
+    "php",
+    "milpa",
+    "framework",
+    "cli",
+    "mcp",
+    "projection",
+    "surface-agnostic",
+    "command-pattern",
+    "agent-ready"
+  ],
+  "type": "library",
+  "license": "Apache-2.0",
+  "authors": [
+    {
+      "name": "Rodrigo Vicente - TeamX Agency",
+      "homepage": "https://x.com/rodrigoteamx"
+    }
+  ],
+  "require": {
+    "php": ">=8.3",
+    "milpa/command": "^0.3",
+    "milpa/core": "^0.6",
+    "milpa/http": "^0.1.5",
+    "milpa/live": "^0.4",
+    "milpa/live-tui": "^0.3",
+    "milpa/plugin": "^0.4",
+    "milpa/tool-runtime": "^0.9"
+  },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.65",
+    "milpa/container": "*",
+    "phpstan/phpdoc-parser": "^2.3",
+    "phpstan/phpstan": "^2.1",
+    "phpunit/phpunit": "^11.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "Milpa\\Console\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Milpa\\Console\\Tests\\": "tests/",
+      "Milpa\\Docs\\": "vendor/milpa/core/tools/gen-docs/"
+    }
+  }
+}

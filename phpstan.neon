@@ -8,8 +8,8 @@ parameters:
         #
         # `trait.unused` es una regla de código cerrado: PHPStan la dispara cuando ningún archivo
         # analizado usa el trait. `SignsOperations` no tiene ni debe tener usuario aquí: existe para
-        # que un CONSUMIDOR ejerza el gate de firma sin una llave real, y su consumidor real es
-        # `milpa/skeleton`, que es otro paquete y por lo tanto invisible a este análisis.
+        # que un CONSUMIDOR ejerza el gate de firma sin una llave real, y ese consumidor es otro
+        # paquete —hasta 0.14.0 fue `milpa/skeleton`— y por lo tanto invisible a este análisis.
         #
         # No es duplicado de lo que ya cubre `CliProjectorSignatureGateTest`: ese arma dobles
         # PARAMETRIZABLES —firma vieja, argumentos alterados, nonce gastado— porque su trabajo es

@@ -35,7 +35,7 @@ use Milpa\ToolRuntime\Identity\VerifiedSigner;
 /**
  * Se publica en `src/` y no en `tests/` a propósito: Composer no autocarga el `autoload-dev` de una
  * dependencia, así que un trait de pruebas que vive en `tests/` es inalcanzable para quien consume el
- * paquete — y `milpa/skeleton` lo necesita para ejercer el gate de firma sin una llave real. Un
+ * paquete — y un host lo necesita para ejercer el gate de firma sin una llave real. Un
  * consumidor que no lo use no paga nada: es un trait, no se instancia.
  */
 trait SignsOperations

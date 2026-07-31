@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/getmilpa/console/compare/v0.2.0...v0.3.0) (2026-07-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* a projected tool's name is now normalised — anything outside `[a-zA-Z0-9_-]` becomes `_`, and names longer than 64 characters are truncated. An operation named `plugins.list` registers as the tool `plugins_list`.
+
+### Features
+
+* normalise MCP tool names to what the spec accepts ([e172915](https://github.com/getmilpa/console/commit/e172915d5f4b4476ff5a8e8d4ad0ce5bcc93defa))
+
 ## [0.2.0](https://github.com/getmilpa/console/compare/v0.1.0...v0.2.0) (2026-07-30)
 
 

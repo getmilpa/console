@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/getmilpa/console/compare/v0.3.1...v0.4.0) (2026-07-31)
+
+
+### Features
+
+* the HTTP projector lands here, with identity behind an interface ([a03502e](https://github.com/getmilpa/console/commit/a03502ee16248858fa206d694981e80ebe0c6fe1))
+
 ## [0.3.1](https://github.com/getmilpa/console/compare/v0.3.0...v0.3.1) (2026-07-31)
 
 

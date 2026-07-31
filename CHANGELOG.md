@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/getmilpa/console/compare/v0.4.2...v0.5.0) (2026-07-31)
+
+
+### Features
+
+* the TUI surface stops being a screen you read ([af3625d](https://github.com/getmilpa/console/commit/af3625d27978db46aa1c2bc4cbcb7f28c51a4d98))
+
 ## [0.4.2](https://github.com/getmilpa/console/compare/v0.4.1...v0.4.2) (2026-07-31)
 
 

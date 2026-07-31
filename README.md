@@ -82,15 +82,40 @@ neither returns a surface model, and that is the thing being retrofitted: a proj
 model and a renderer will materialize it, so a surface can change its renderer without touching its
 projector.
 
-The HTTP projector is deliberately **not** here yet. It conflates projection, policy enforcement and
-materialization in one class, and moving it as-is would drag `milpa/auth` into a framework floor that
-is meant to run without it.
+## HTTP, without dragging identity in
+
+`Milpa\Console\Http\HttpProjector` is the fourth surface: one route per operation, plus the generic
+controller those routes point at. It arrived in 0.4.0 — until then it lived in `milpa/skeleton`,
+because moving it as-is would have dragged `milpa/auth` into a floor meant to run without it.
+
+What made the move possible is that identity now sits behind an interface. The projector knows
+nothing about who is calling; `OperationHttpPolicy` does, and
+[`milpa/admin`](https://packagist.org/packages/milpa/admin) publishes the implementation that uses
+`milpa/auth`. Write your own and the projector will use it.
+
+```php
+use Milpa\Console\Http\HttpProjector;
+
+// $psr17 is any PSR-17 factory pair you already have (Nyholm, Guzzle, Laminas…).
+$projector = new HttpProjector($operations, $container, $psr17, $psr17, policy: $yourPolicy);
+
+$routes = $projector->routes();     // hand these to your router
+$model  = $projector->project($op); // or just ask what an operation would expose
+```
+
+Unlike the other optional collaborators in this family, **not knowing is not permission here**: an
+operation that declares scopes with no policy wired throws `UnguardedOperationException` (a 500)
+rather than running unguarded. It stays a 500 and never a 401/403 — the caller did nothing wrong; the
+host declared something protected and left it without a guard. An operation that declares neither
+scopes nor a permission never touches any of this.
 
 ## Requirements
 
 - PHP >= 8.3
 - [`milpa/command`](https://github.com/getmilpa/command), [`milpa/core`](https://github.com/getmilpa/core),
-  [`milpa/tool-runtime`](https://github.com/getmilpa/tool-runtime)
+  [`milpa/tool-runtime`](https://github.com/getmilpa/tool-runtime), [`milpa/http`](https://github.com/getmilpa/http)
+- `psr/http-message` and `psr/http-factory` — interfaces only. The HTTP projector asks for the PSR-17
+  factories instead of picking a PSR-7 implementation for you.
 
 ## Contributing
 

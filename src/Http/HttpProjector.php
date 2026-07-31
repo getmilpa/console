@@ -1,0 +1,280 @@
+<?php
+
+/**
+ * This file is part of Milpa Console — the projection layer that turns one declared Operation into the shape each surface speaks.
+ *
+ * (c) Rodrigo Vicente - TeamX Agency — https://teamx.agency <hola@teamx.agency>
+ *
+ * @license Apache-2.0
+ *
+ * @link    https://github.com/getmilpa/console
+ */
+
+declare(strict_types=1);
+
+namespace Milpa\Console\Http;
+
+use Milpa\Command\HttpRouteModel;
+use Milpa\Command\Operation;
+use Milpa\Command\SurfaceProjector;
+use Milpa\Console\ConfirmTokenStore;
+use Milpa\Console\SchemaCoercer;
+use Milpa\Console\SchemaCoercionException;
+use Milpa\Http\HttpMethod;
+use Milpa\Http\Routing\HandlerReference;
+use Milpa\Http\Routing\Route;
+use Milpa\Http\Routing\RouteResult;
+use Milpa\Interfaces\Di\DIContainerInterface;
+use Psr\Http\Message\ResponseFactoryInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamFactoryInterface;
+
+/**
+ * Proyecta operaciones a HTTP: una ruta por operación, y el controlador genérico al que apuntan.
+ *
+ * Es las dos mitades de ADR-0035 en una clase, y a propósito: {@see self::project()} produce un
+ * VALOR —el modelo de ruta, sin montar nada ni consultar el contenedor— y {@see self::routes()} +
+ * {@see self::handle()} materializan. Que convivan es lo que permite preguntar qué expone una
+ * operación sin levantar un servidor.
+ *
+ * `handle()` busca la operación de la ruta que hizo match, deja que la política decida si quien
+ * llama puede, aplica la compuerta de confirmación en dos pasos para lo que muta, junta ruta + query
+ * + cuerpo en una sola bolsa de entrada, la valida contra el esquema declarado, llama al handler de
+ * la operación y serializa lo que devuelva.
+ *
+ * ── LA IDENTIDAD ESTÁ DEL OTRO LADO DE UNA INTERFAZ ─────────────────────────────────────────────
+ *
+ * Esta clase no conoce `milpa/auth`. Quien sabe quién llama es {@see OperationHttpPolicy}, y por eso
+ * el proyector pudo mudarse a `milpa/console` —junto a los otros tres— sin arrastrar identidad al
+ * piso mínimo del framework. Vivía en `milpa/skeleton`, que era la única casa que tenía; cuando
+ * skeleton se retiró como puerta de entrada, ésta era la capacidad que se iba con él.
+ *
+ * ── EL ENFORCEMENT VA EN `handle()`, NO EN EL MIDDLEWARE DE LA RUTA ─────────────────────────────
+ *
+ * Hay UNA instancia sirviendo TODAS las operaciones, y el `middleware[]` de una ruta se resuelve por
+ * class-string a una única instancia compartida — que no puede cargar la lista de scopes de cada
+ * operación. El handler genérico es el único lugar donde se sabe de qué operación se trata.
+ *
+ * ── UNA SOLA INSTANCIA POR APP ─────────────────────────────────────────────────────────────────
+ *
+ * Cada ruta sintetizada apunta a `HandlerReference(self::class, 'handle')`, que se resuelve por esa
+ * misma clave al despachar. Si dos plugins registraran su propia instancia, la última ganaría la
+ * ranura del contenedor y las rutas de la primera resolverían a una instancia que no conoce su
+ * operación — y contestarían 404.
+ */
+final class HttpProjector implements SurfaceProjector
+{
+    /** @var array<string, Operation> keyed by operation name */
+    private array $operations = [];
+
+    /**
+     * Las fábricas PSR-17 se inyectan y no se instancian.
+     *
+     * Un paquete de proyección no tiene por qué elegirle a nadie su implementación de PSR-7: quien
+     * monta la app ya tiene una, y pedir la interfaz es lo que evita que `milpa/console` arrastre
+     * una segunda a un árbol que ya la tiene.
+     *
+     * @param iterable<Operation> $operations
+     */
+    public function __construct(
+        iterable $operations,
+        private readonly DIContainerInterface $container,
+        private readonly ResponseFactoryInterface $responses,
+        private readonly StreamFactoryInterface $streams,
+        private readonly SchemaCoercer $coercer = new SchemaCoercer(),
+        private readonly ConfirmTokenStore $tokens = new ConfirmTokenStore(),
+        // La política se inyecta y ya no se hereda: es el eje `Intent -> Policy -> Signer`, y tenerla
+        // como colaborador es lo que permite verla, sustituirla y probarla sola.
+        private readonly ?OperationHttpPolicy $policy = null,
+    ) {
+        foreach ($operations as $op) {
+            if ($op->supportsSurface('http')) {
+                $this->operations[$op->name] = $op;
+            }
+        }
+    }
+
+    /** La superficie que proyecta — con la que el registro de projectors lo encuentra. */
+    public function surface(): string
+    {
+        return 'http';
+    }
+
+    /**
+     * Si esta operación se ofrece por HTTP.
+     *
+     * Un proyector que reclamara todas expondría por la red las que su autor declaró sólo para la
+     * terminal, que es la clase de fuga que nadie revisa porque nadie la escribió.
+     */
+    public function supports(Operation $op): bool
+    {
+        return $op->supportsSurface('http');
+    }
+
+    /**
+     * La ruta que HTTP expone para esta operación, como valor: no monta nada, no atiende nada, no
+     * consulta al contenedor.
+     */
+    public function project(Operation $op): HttpRouteModel
+    {
+        return new HttpRouteModel(
+            method: $op->mutating ? HttpMethod::POST->value : HttpMethod::GET->value,
+            path: $this->pathFor($op),
+            name: $op->name,
+            scopes: $op->scopes,
+            permission: $op->permission,
+        );
+    }
+
+    /**
+     * Una ruta por operación, todas apuntando al mismo handler genérico.
+     *
+     * @return list<Route>
+     */
+    public function routes(): array
+    {
+        $routes = [];
+        foreach ($this->operations as $op) {
+            $routes[] = new Route(
+                path: $this->pathFor($op),
+                methods: $op->mutating ? HttpMethod::POST : HttpMethod::GET,
+                name: $op->name,
+                handler: new HandlerReference(self::class, 'handle'),
+            );
+        }
+
+        return $routes;
+    }
+
+    /** Atiende una petición ya ruteada: autoriza, confirma, valida, ejecuta y serializa. */
+    public function handle(ServerRequestInterface $request): ResponseInterface
+    {
+        $result = $request->getAttribute(RouteResult::ATTRIBUTE);
+
+        $route = null;
+        $parameters = [];
+        if ($result instanceof RouteResult) {
+            $route = $result->route;
+            $parameters = $result->parameters;
+        }
+
+        $op = $route?->name !== null ? ($this->operations[$route->name] ?? null) : null;
+
+        if ($op === null) {
+            return $this->json(404, ['error' => 'operation not found']);
+        }
+
+        // Una operación SIN scopes ni permiso no toca nada de esto: es idéntica a como corría antes
+        // de que existiera política, y por eso un host sin identidad puede exponer operaciones.
+        if ($op->scopes !== [] || $op->permission !== null) {
+            if ($this->policy === null) {
+                throw $op->permission !== null
+                    ? UnguardedOperationException::permissioned($op->name, $op->permission)
+                    : UnguardedOperationException::scoped($op->name, $op->scopes);
+            }
+
+            $denied = $this->policy->enforce($op, $request);
+            if ($denied !== null) {
+                return $denied;
+            }
+        }
+
+        if ($op->mutating && $op->requiresConfirmation) {
+            $token = $request->getHeaderLine('Confirm-Token');
+            if ($token === '') {
+                return $this->json(428, [
+                    'requires_confirmation' => true,
+                    'confirm_token' => $this->tokens->issue($op->name),
+                ]);
+            }
+            if (!$this->tokens->consume($token, $op->name)) {
+                return $this->json(428, [
+                    'requires_confirmation' => true,
+                    'error' => 'invalid or expired confirmation token',
+                    'confirm_token' => $this->tokens->issue($op->name),
+                ]);
+            }
+        }
+
+        $raw = $parameters;
+        foreach ($request->getQueryParams() as $key => $value) {
+            $raw[$key] = $value;
+        }
+        /** @var mixed $body */
+        $body = json_decode((string) $request->getBody(), true);
+        if (\is_array($body)) {
+            foreach ($body as $key => $value) {
+                $raw[$key] = $value;
+            }
+        }
+
+        try {
+            $input = $this->coercer->coerce($op->inputSchema ?? [], $raw);
+        } catch (SchemaCoercionException $e) {
+            return $this->json(422, ['errors' => $e->errors]);
+        }
+
+        $handler = $op->handler;
+        if (\is_callable($handler)) {
+            /** @var mixed $data */
+            $data = $handler($input);
+        } else {
+            [$class, $method] = $handler;
+            $instance = $this->container->get($class);
+            if (!\is_object($instance)) {
+                return $this->json(500, ['error' => "operation '{$op->name}': {$class} did not resolve to an object."]);
+            }
+            /** @var mixed $data */
+            $data = $instance->{$method}($input);
+        }
+
+        return $this->json($op->mutating ? 201 : 200, $data);
+    }
+
+    /**
+     * La ruta de una operación: la que declaró, o una derivada de su nombre (`_` → `-`, `:` → `/`).
+     */
+    private function pathFor(Operation $op): string
+    {
+        if ($op->path !== null) {
+            return $op->path;
+        }
+        $segments = array_map(
+            static fn (string $s): string => str_replace('_', '-', $s),
+            explode(':', $op->name),
+        );
+
+        $this->assertValidDerivedSegments($op->name, $segments);
+
+        return '/' . implode('/', $segments);
+    }
+
+    /**
+     * Protege una ruta DERIVADA —nunca una declarada— de degenerar en algo que la gramática del
+     * router no puede expresar: un segmento vacío (`//` o una barra final) o con `{`/`}`, que
+     * formaría a medias un parámetro que nadie quiso. Falla al sintetizar la ruta, en el arranque, en
+     * vez de registrar en silencio una ruta rota.
+     *
+     * @param list<string> $segments
+     */
+    private function assertValidDerivedSegments(string $name, array $segments): void
+    {
+        foreach ($segments as $segment) {
+            if ($segment === '' || str_contains($segment, '{') || str_contains($segment, '}')) {
+                throw new \InvalidArgumentException(
+                    "Operation '{$name}' derives an invalid HTTP path segment from its name "
+                    . "(derived path: '/" . implode('/', $segments) . "'). "
+                    . 'Set an explicit path: on the Operation instead of relying on derivation.',
+                );
+            }
+        }
+    }
+
+    private function json(int $status, mixed $data): ResponseInterface
+    {
+        return $this->responses->createResponse($status)
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody($this->streams->createStream((string) json_encode($data)));
+    }
+}

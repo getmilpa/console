@@ -58,6 +58,7 @@ final class OperationsScreen
         private readonly int $width = 80,
         private readonly int $height = 24,
         private readonly bool $ansi = true,
+        private readonly ?\Milpa\Interfaces\Event\MilpaEventDispatcherInterface $dispatcher = null,
     ) {
         // Consultan primero y cambian algo después, que es el orden en que alguien decide: se mira
         // antes de tocar. Dentro de cada grupo, alfabético — un orden que no cambia entre corridas.
@@ -157,7 +158,7 @@ final class OperationsScreen
         $enfocado = $loop->focusedId();
         foreach ($this->operaciones as $operacion) {
             if ('op:' . $operacion->name === $enfocado) {
-                $this->abierta = new OperationScreen($operacion, $this->container, $this->width, $this->height, $this->ansi);
+                $this->abierta = new OperationScreen($operacion, $this->container, $this->width, $this->height, $this->ansi, dispatcher: $this->dispatcher);
                 $this->nombreAbierta = $operacion->name;
 
                 return true;

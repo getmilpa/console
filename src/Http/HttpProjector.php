@@ -19,6 +19,8 @@ use Milpa\Command\Operation;
 use Milpa\Command\OperationHttpPolicy;
 use Milpa\Command\SurfaceProjector;
 use Milpa\Console\ConfirmTokenStore;
+use Milpa\Console\OperationRunner;
+use Milpa\Console\OperationStoppedException;
 use Milpa\Console\SchemaCoercer;
 use Milpa\Console\SchemaCoercionException;
 use Milpa\Http\HttpMethod;
@@ -88,6 +90,7 @@ final class HttpProjector implements SurfaceProjector
         // La política se inyecta y ya no se hereda: es el eje `Intent -> Policy -> Signer`, y tenerla
         // como colaborador es lo que permite verla, sustituirla y probarla sola.
         private readonly ?OperationHttpPolicy $policy = null,
+        private readonly ?\Milpa\Interfaces\Event\MilpaEventDispatcherInterface $dispatcher = null,
     ) {
         foreach ($operations as $op) {
             if ($op->supportsSurface('http')) {
@@ -216,18 +219,16 @@ final class HttpProjector implements SurfaceProjector
             return $this->json(422, ['errors' => $e->errors]);
         }
 
-        $handler = $op->handler;
-        if (\is_callable($handler)) {
+        // Por el runner, como las otras tres superficies: es donde viven los ganchos y el veredicto.
+        try {
             /** @var mixed $data */
-            $data = $handler($input);
-        } else {
-            [$class, $method] = $handler;
-            $instance = $this->container->get($class);
-            if (!\is_object($instance)) {
-                return $this->json(500, ['error' => "operation '{$op->name}': {$class} did not resolve to an object."]);
-            }
-            /** @var mixed $data */
-            $data = $instance->{$method}($input);
+            $data = (new OperationRunner($this->container, $this->dispatcher))->run($op, $input, 'http');
+        } catch (OperationStoppedException $e) {
+            // Detenida por un listener: 409, porque no es culpa de quien llamó ni un error del
+            // servidor — es un estado que impide correrla ahora.
+            return $this->json(409, ['error' => $e->getMessage(), 'code' => 'MILPA_OPERATION_STOPPED']);
+        } catch (\Throwable $e) {
+            return $this->json(500, ['error' => $e->getMessage()]);
         }
 
         return $this->json($op->mutating ? 201 : 200, $data);

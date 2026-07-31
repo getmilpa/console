@@ -17,6 +17,7 @@ namespace Milpa\Console\Tui;
 use Milpa\Command\Operation;
 use Milpa\Console\Rendering\CliRenderer;
 use Milpa\Console\Rendering\PlainTextCliRenderer;
+use Milpa\Console\OperationRunner;
 use Milpa\Console\SchemaCoercer;
 use Milpa\Console\SchemaCoercionException;
 use Milpa\Console\TuiProjector;
@@ -79,6 +80,7 @@ final class OperationScreen
         bool $ansi = true,
         private readonly SchemaCoercer $coercer = new SchemaCoercer(),
         private readonly CliRenderer $renderer = new PlainTextCliRenderer(),
+        private readonly ?\Milpa\Interfaces\Event\MilpaEventDispatcherInterface $dispatcher = null,
     ) {
         $this->campos = $this->camposDe($operacion);
         foreach ($this->campos as $campo) {
@@ -241,7 +243,7 @@ final class OperationScreen
         }
 
         try {
-            $resultado = $this->invocar($entrada);
+            $resultado = (new OperationRunner($this->container, $this->dispatcher))->run($this->operacion, $entrada, 'tui');
         } catch (\Throwable $e) {
             $this->estado = 'corrida';
             $this->ok = false;
@@ -251,42 +253,8 @@ final class OperationScreen
         }
 
         $this->estado = 'corrida';
-        $this->ok = $this->veredicto($resultado);
+        $this->ok = OperationRunner::verdict($resultado);
         $this->salida = $this->renderer->present($resultado, $this->ok);
-    }
-
-    /**
-     * @param array<string, mixed> $entrada
-     */
-    private function invocar(array $entrada): mixed
-    {
-        $handler = $this->operacion->handler;
-        if (\is_callable($handler)) {
-            return $handler($entrada);
-        }
-
-        [$clase, $metodo] = $handler;
-        $instancia = $this->container->get($clase);
-        if (!\is_object($instancia)) {
-            throw new \RuntimeException("«{$this->operacion->name}»: {$clase} no resolvió a un objeto.");
-        }
-
-        return $instancia->{$metodo}($entrada);
-    }
-
-    /**
-     * El veredicto: un `ok` booleano en la raíz del resultado ES el veredicto.
-     *
-     * Es la misma convención que el CLI usa para el código de salida. Sin ella, una pantalla que
-     * pinta un resultado de error en verde miente con más autoridad que un texto plano.
-     */
-    private function veredicto(mixed $resultado): bool
-    {
-        if (\is_array($resultado) && \array_key_exists('ok', $resultado) && \is_bool($resultado['ok'])) {
-            return $resultado['ok'];
-        }
-
-        return true;
     }
 
     /** La línea de terminal equivalente, con lo que ya se tecleó y `--sign`. */

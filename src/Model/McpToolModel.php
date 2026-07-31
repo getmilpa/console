@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Milpa\Console\Model;
 
+use Milpa\Command\Operation;
 use Milpa\Command\SurfaceModel;
 
 /**
@@ -32,6 +33,13 @@ final readonly class McpToolModel implements SurfaceModel
      * @param array<string, mixed>|null                  $outputSchema
      * @param list<string>                               $scopes
      * @param callable|array{0: class-string, 1: string} $handler      referencia sin resolver
+     * @param Operation|null                             $operation    la operación de la que ESTE modelo es
+     *                                                                 proyección. Va al final y es opcional para
+     *                                                                 no romper a quien arme un modelo a mano,
+     *                                                                 pero cuando está, el materializador ejecuta
+     *                                                                 por `OperationRunner` — que es donde viven
+     *                                                                 los ganchos de operación. Sin ella cae al
+     *                                                                 handler directo, como antes.
      */
     public function __construct(
         public string $name,
@@ -43,6 +51,7 @@ final readonly class McpToolModel implements SurfaceModel
         public bool $requiresConfirmation = false,
         public ?string $version = null,
         public ?array $outputSchema = null,
+        public ?Operation $operation = null,
     ) {
     }
 

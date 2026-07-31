@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Milpa\Console;
 
 use Milpa\Command\Operation;
+use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Console\Rendering\CliRenderer;
 use Milpa\Console\Rendering\PlainTextCliRenderer;
 use Milpa\Interfaces\Di\DIContainerInterface;
@@ -56,6 +57,9 @@ final class CliRunner
         private readonly ?OperationSigner $signer = null,
         private readonly ?OperationAuthorizer $authorizer = null,
         private readonly CliRenderer $renderer = new PlainTextCliRenderer(),
+        // Opcional, como en todo lo demás: un host que no cablea eventos corre igual y lo que pierde
+        // son los ganchos, no la capacidad.
+        private readonly ?MilpaEventDispatcherInterface $dispatcher = null,
     ) {
     }
 
@@ -168,22 +172,24 @@ final class CliRunner
             }
         }
 
-        $handler = $op->handler;
-        if (\is_callable($handler)) {
+        // Por el runner y no a mano: es la única costura por la que pasan las cuatro superficies, y
+        // por lo tanto el único lugar donde un gancho ve TODO. Cuando esto resolvía el handler por su
+        // cuenta, un listener que auditaba una operación que muta la veía por MCP y no aquí.
+        try {
             /** @var mixed $result */
-            $result = $handler($input);
-        } else {
-            [$class, $method] = $handler;
-            $instance = $container->get($class);
-            if (!\is_object($instance)) {
-                foreach ($this->renderer->presentError("command '{$op->name}': {$class} did not resolve to an object.") as $linea) {
-                    $out($linea);
-                }
-
-                return 1;
+            $result = (new OperationRunner($container, $this->dispatcher))->run($op, $input, 'cli');
+        } catch (OperationStoppedException $e) {
+            foreach ($this->renderer->presentError($e->getMessage()) as $linea) {
+                $out($linea);
             }
-            /** @var mixed $result */
-            $result = $instance->{$method}($input);
+
+            return 1;
+        } catch (\Throwable $e) {
+            foreach ($this->renderer->presentError($e->getMessage()) as $linea) {
+                $out($linea);
+            }
+
+            return 1;
         }
 
         // Un entero sigue siendo un CÓDIGO DE SALIDA y no un resultado que pintar: es la convención
@@ -193,38 +199,12 @@ final class CliRunner
             return $result;
         }
 
-        $ok = $this->veredicto($result);
+        $ok = OperationRunner::verdict($result);
         foreach ($this->renderer->present($result, $ok) as $linea) {
             $out($linea);
         }
 
         return $ok ? 0 : 1;
-    }
-
-    /**
-     * El veredicto de una invocación, leído del resultado.
-     *
-     * Un `ok` booleano en la raíz del resultado ES el veredicto. No es una convención inventada
-     * aquí: es la que la familia ya usaba —`{"ok": …}` en la salida `--json` de los comandos del
-     * host, en `SecurityAuditTools`, en la envoltura de {@see \Milpa\Console\Rendering\JsonCliRenderer}—
-     * y lo único nuevo es que ahora se HONRA en vez de ignorarse.
-     *
-     * Que se ignorara costaba caro y en silencio: una operación de diagnóstico que reportaba
-     * `ok: false` salía con código 0, así que un CI que la corría pasaba en verde sobre un
-     * manifiesto inválido. El comando de Symfony al que sustituye devolvía `FAILURE` en ese caso, y
-     * perder eso al volverlo átomo habría convertido una migración en una regresión invisible.
-     *
-     * Un resultado SIN `ok` es un acierto: la mayoría de las operaciones devuelven datos y no
-     * veredictos, y exigirles la llave las obligaría a hablar de códigos de salida — o sea a saber
-     * que existe una terminal.
-     */
-    private function veredicto(mixed $result): bool
-    {
-        if (\is_array($result) && \array_key_exists('ok', $result) && \is_bool($result['ok'])) {
-            return $result['ok'];
-        }
-
-        return true;
     }
 
     /**

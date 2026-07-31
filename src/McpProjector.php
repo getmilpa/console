@@ -17,6 +17,7 @@ namespace Milpa\Console;
 use Milpa\Command\Operation;
 use Milpa\Command\SurfaceProjector;
 use Milpa\Console\Model\McpToolModel;
+use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Interfaces\Di\DIContainerInterface;
 use Milpa\Interfaces\Tooling\ToolRegistryInterface;
 use Milpa\ValueObjects\Tooling\ToolOptions;
@@ -47,6 +48,15 @@ use Milpa\ValueObjects\Tooling\ToolOptions;
  */
 final class McpProjector implements SurfaceProjector
 {
+    /**
+     * El despachador es opcional y viaja al {@see OperationRunner} que materializa cada herramienta:
+     * con él, una operación llamada por un agente emite los mismos eventos que si la hubieran corrido
+     * en la terminal. Sin él, corre igual.
+     */
+    public function __construct(private readonly ?MilpaEventDispatcherInterface $dispatcher = null)
+    {
+    }
+
     /** The surface tag this projector answers for — `mcp`. */
     public function surface(): string
     {
@@ -97,6 +107,7 @@ final class McpProjector implements SurfaceProjector
             requiresConfirmation: $op->requiresConfirmation,
             version: $op->version,
             outputSchema: $op->outputSchema,
+            operation: $op,
         );
     }
 
@@ -114,7 +125,7 @@ final class McpProjector implements SurfaceProjector
             $model->name,
             $model->description,
             $model->inputSchema,
-            $this->callableFrom($model->handler, $container),
+            $this->callableFrom($model, $container),
             new ToolOptions(
                 scopes: $model->scopes,
                 mutating: $model->mutating,
@@ -146,18 +157,35 @@ final class McpProjector implements SurfaceProjector
     }
 
     /**
-     * @param callable|array{0: class-string, 1: string} $handler
+     * El callable que el registry va a invocar — y que pasa por {@see OperationRunner}, como las otras
+     * tres superficies.
+     *
+     * Esta superficie YA tenía ganchos: `tool.executing` y `tool.executed` los emite el registry de
+     * `milpa/tool-runtime`, y son de una HERRAMIENTA. Los del runner son de una OPERACIÓN, y por eso
+     * conviven en vez de sustituirse: un listener que audita operaciones las ve por las cuatro
+     * superficies, y uno que audita herramientas sigue viendo lo que el registry sirve —incluidas las
+     * que un plugin registró con `#[Tool]` y nunca fueron una operación.
      *
      * @return callable(array<string, mixed>): mixed
      */
-    private function callableFrom(mixed $handler, DIContainerInterface $container): callable
+    private function callableFrom(McpToolModel $model, DIContainerInterface $container): callable
     {
+        $operacion = $model->operation;
+        if ($operacion !== null) {
+            $runner = new OperationRunner($container, $this->dispatcher);
+
+            return static fn (array $args): mixed => $runner->run($operacion, $args, 'mcp');
+        }
+
+        // Un modelo armado a mano, sin la operación de la que salió: se ejecuta como antes. No hay
+        // nada que emitir sobre una operación que no se tiene.
+        $handler = $model->handler;
         if (\is_callable($handler)) {
             return $handler;
         }
 
-        [$class, $method] = $handler;
+        [$clase, $metodo] = $handler;
 
-        return static fn (array $args): mixed => $container->get($class)->{$method}($args);
+        return static fn (array $args): mixed => $container->get($clase)->{$metodo}($args);
     }
 }

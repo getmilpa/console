@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/getmilpa/console/compare/v0.4.1...v0.4.2) (2026-07-31)
+
+
+### Bug Fixes
+
+* the HTTP policy contract now lives in milpa/command ([47b7bf1](https://github.com/getmilpa/console/commit/47b7bf168c3db7577f11dda14d52eec042699cc3))
+
 ## [0.4.1](https://github.com/getmilpa/console/compare/v0.4.0...v0.4.1) (2026-07-31)
 
 

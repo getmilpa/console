@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/getmilpa/console/compare/v0.5.0...v0.6.0) (2026-07-31)
+
+
+### Features
+
+* OperationRunner — one place where an operation runs, and one place a hook sees it ([7402a51](https://github.com/getmilpa/console/commit/7402a51181c2945cf6a5a3afaa0df074b9e38f53))
+
 ## [0.5.0](https://github.com/getmilpa/console/compare/v0.4.2...v0.5.0) (2026-07-31)
 
 

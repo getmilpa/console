@@ -144,6 +144,56 @@ final class McpProjectorTest extends TestCase
         self::assertTrue($p->supports(new Operation('b', 'x', static fn () => null, surfaces: ['mcp', 'cli'])));
         self::assertFalse($p->supports(new Operation('c', 'x', static fn () => null, surfaces: ['cli'])));
     }
+    /**
+     * Un nombre que MCP no acepta se normaliza; uno que sí, se deja intacto.
+     *
+     * La spec acota a `[a-zA-Z0-9_-]`, y la familia no nombra con una sola convención: el host
+     * escribe `agent_context`, `milpa/plugin` escribe `plugins.list`. Sólo la primera le sirve a esta
+     * superficie —un cliente MCP RECHAZA la segunda— así que se traduce aquí, que es donde cada
+     * superficie ya traduce a su convención.
+     */
+    public function test_el_nombre_se_normaliza_a_lo_que_mcp_acepta(): void
+    {
+        self::assertSame('plugins_list', McpProjector::toolName('plugins.list'));
+        self::assertSame('agent_context', McpProjector::toolName('agent_context'), 'lo que ya es válido no se toca');
+        self::assertSame('coa_algo', McpProjector::toolName('coa:algo'));
+        self::assertSame('a-b_c', McpProjector::toolName('a-b.c'), 'el guion medio SÍ lo admite la spec');
+    }
+
+    /** Y el modelo proyectado lo lleva ya normalizado, no el nombre crudo del átomo. */
+    public function test_el_modelo_proyectado_lleva_el_nombre_normalizado(): void
+    {
+        $op = new Operation('plugins.remove', 'Quita un plugin', static fn (array $i): array => $i);
+
+        self::assertSame('plugins_remove', (new McpProjector())->project($op)->name);
+    }
+
+    /**
+     * Normalizar puede hacer chocar dos nombres distintos, y ese choque NO se calla.
+     *
+     * `plugins.list` y `plugins_list` son átomos distintos que colapsan al mismo nombre de
+     * herramienta. Registrar el segundo encima del primero dejaría a un agente llamando a uno
+     * creyendo que llama al otro — así que el registry lanza, y aquí queda fijado que lanza.
+     */
+    public function test_dos_atomos_que_colapsan_al_mismo_nombre_no_se_pisan(): void
+    {
+        $registry = new \Milpa\ToolRuntime\ToolRegistry(new \Psr\Log\NullLogger());
+        $projector = new McpProjector();
+        $container = new DIContainer();
+
+        $projector->materialize(
+            $projector->project(new Operation('plugins.list', 'Uno', static fn (array $i): array => $i)),
+            $registry,
+            $container,
+        );
+
+        $this->expectException(\Throwable::class);
+        $projector->materialize(
+            $projector->project(new Operation('plugins_list', 'Otro', static fn (array $i): array => $i)),
+            $registry,
+            $container,
+        );
+    }
 }
 
 /** El doble del handler que la operación referencia por clase y método. */
@@ -185,4 +235,5 @@ final class RegistryEspia implements ToolRegistryInterface
 
         $this->registrados[] = compact('name', 'description', 'inputSchema', 'callback', 'options');
     }
+
 }

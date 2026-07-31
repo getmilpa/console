@@ -28,6 +28,22 @@ use Milpa\ValueObjects\Tooling\ToolOptions;
  * projector only maps the atom's metadata into a ToolOptions. It references only milpa/core types
  * (always present), so it needs no class_exists guard; the guard lives at the call site where the
  * concrete ToolRegistry is constructed.
+ *
+ * ── EL NOMBRE SE NORMALIZA A LO QUE MCP ACEPTA ──────────────────────────────────────────────────
+ *
+ * La spec de MCP acota un nombre de herramienta a `[a-zA-Z0-9_-]`, hasta 64 caracteres. La familia no
+ * usa una sola convención para nombrar átomos —el host escribe `agent_context`, `milpa/plugin`
+ * escribe `plugins.list`— y sólo una de las dos le sirve a esta superficie: un cliente MCP RECHAZA
+ * `plugins.list`.
+ *
+ * Así que se traduce aquí, que es donde cada superficie ya traduce a su convención: el materializador
+ * de una terminal convierte `_` en `:` porque una terminal expresa jerarquía con dos puntos, y esto
+ * convierte todo lo que MCP no admite en `_` por la misma razón. Ninguna de las dos convenciones
+ * tiene que ceder, y ningún paquete tiene que renombrar sus átomos para poder proyectarse.
+ *
+ * La alternativa medida era renombrar los siete átomos de `milpa/plugin`: cinco releases en cascada
+ * para arreglar UNA instancia, contra tres para arreglar la clase entera. Y el siguiente paquete que
+ * eligiera un nombre con punto lo habría repetido.
  */
 final class McpProjector implements SurfaceProjector
 {
@@ -44,6 +60,23 @@ final class McpProjector implements SurfaceProjector
     }
 
     /**
+     * El nombre que MCP acepta para un átomo: todo lo que no sea `[a-zA-Z0-9_-]` se vuelve `_`.
+     *
+     * Es determinista y sin estado, así que dos hosts distintos proyectan el mismo átomo al mismo
+     * nombre de herramienta. Un mapeo por host habría hecho que un agente aprendiera un nombre en un
+     * despliegue y otro en el siguiente.
+     *
+     * El recorte a 64 caracteres es de la spec. Se corta por el final porque el prefijo es lo que
+     * identifica —`plugins_`, `governance_`— y perderlo dejaría nombres indistinguibles entre sí.
+     */
+    public static function toolName(string $operationName): string
+    {
+        $normalizado = (string) preg_replace('/[^a-zA-Z0-9_-]/', '_', $operationName);
+
+        return mb_strlen($normalizado) > 64 ? mb_substr($normalizado, 0, 64) : $normalizado;
+    }
+
+    /**
      * Proyecta la operación a la herramienta que un agente verá: nombre, descripción, esquema y las
      * banderas de política. Devuelve un valor, no toca nada.
      *
@@ -55,7 +88,7 @@ final class McpProjector implements SurfaceProjector
     public function project(Operation $op): McpToolModel
     {
         return new McpToolModel(
-            name: $op->name,
+            name: self::toolName($op->name),
             description: $op->description,
             inputSchema: $op->inputSchema ?? [],
             handler: $op->handler,

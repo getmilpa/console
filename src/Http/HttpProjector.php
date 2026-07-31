@@ -16,6 +16,7 @@ namespace Milpa\Console\Http;
 
 use Milpa\Command\HttpRouteModel;
 use Milpa\Command\Operation;
+use Milpa\Command\OperationHttpPolicy;
 use Milpa\Command\SurfaceProjector;
 use Milpa\Console\ConfirmTokenStore;
 use Milpa\Console\SchemaCoercer;

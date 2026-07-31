@@ -14,42 +14,23 @@ declare(strict_types=1);
 
 namespace Milpa\Console\Http;
 
-use Milpa\Command\Operation;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
+use Milpa\Command\OperationHttpPolicy as ContratoDeCommand;
 
 /**
- * Decide si esta petición puede correr esta operación.
+ * El contrato de política HTTP, que ahora vive en `milpa/command`.
  *
- * ── POR QUÉ ES UN CONTRATO ──────────────────────────────────────────────────────────────────────
+ * Nació aquí, con el proyector, y eso obligaba a quien la implementa —`milpa/auth`, que es piso— a
+ * depender de `milpa/console`, que arrastra plugins, live y tool-runtime. La dependencia iba al
+ * revés, así que el contrato se mudó a `milpa/command`, donde vive `Operation` y donde no cuesta
+ * nada.
  *
- * Porque quien sabe quién llama es el host, no el proyector. La implementación real de esta política
- * usa `milpa/auth` —contexto verificado, scopes, permisos— y meterla aquí arrastraría la identidad al
- * piso mínimo del framework: un paquete que sólo quiere exponer operaciones por HTTP tendría que
- * instalar un sistema de autenticación para lograrlo.
+ * Esta interfaz SE QUEDA extendiendo a la otra en vez de desaparecer: quien la haya implementado
+ * —era pública desde 0.4.0— sigue funcionando sin tocar una línea, y quien la reciba por parámetro
+ * también, porque un `Milpa\Command\OperationHttpPolicy` la satisface. Preferir la de `milpa/command`
+ * en código nuevo.
  *
- * Separarlas tiene una consecuencia medible y no sólo argumentable: las 37 referencias a `Milpa\Auth`
- * que tenía el proyector viven todas del otro lado de esta interfaz. `milpa/admin` publica la
- * implementación con auth; un host puede escribir la suya.
- *
- * ── NO SABER NO ES PERMITIR ─────────────────────────────────────────────────────────────────────
- *
- * Al revés que otros contratos opcionales de la familia, la ausencia de política NO deja pasar. Una
- * operación que declara scopes y corre sin nadie que los revise es exactamente el agujero que esta
- * capa vino a cerrar, así que {@see HttpProjector} se niega —con un 500, no un 403— cuando el host
- * declaró algo protegido y no cableó con qué protegerlo. La culpa es del servidor y la respuesta lo
- * dice; un 4xx culparía a quien llamó, que no hizo nada mal.
+ * @deprecated 0.5.0 usa {@see \Milpa\Command\OperationHttpPolicy}
  */
-interface OperationHttpPolicy
+interface OperationHttpPolicy extends ContratoDeCommand
 {
-    /**
-     * `null` significa adelante; una respuesta ES la negativa, ya formada (401 o 403).
-     *
-     * Devuelve la respuesta en vez de lanzar porque una negativa autorizada NO es un error: es el
-     * resultado correcto de preguntar. Lo que sí lanza esta capa es el caso en que no se puede ni
-     * preguntar —el host no cableó cadena de autenticación—, que es un defecto de configuración.
-     *
-     * @throws \RuntimeException cuando la operación exige identidad y el host no cableó ninguna
-     */
-    public function enforce(Operation $op, ServerRequestInterface $request): ?ResponseInterface;
 }

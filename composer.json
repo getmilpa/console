@@ -22,7 +22,7 @@
   ],
   "require": {
     "php": ">=8.3",
-    "milpa/command": "^0.3",
+    "milpa/command": "^0.3.1",
     "milpa/core": "^0.6",
     "milpa/http": "^0.1.5",
     "milpa/live": "^0.4",

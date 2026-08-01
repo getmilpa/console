@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/getmilpa/console/compare/v0.6.1...v0.7.0) (2026-08-01)
+
+
+### Features
+
+* el runner lleva el contexto de invocacion hasta el handler ([fc24060](https://github.com/getmilpa/console/commit/fc2406018255136441a853ac9d2cc7713017a652))
+
 ## [0.6.1](https://github.com/getmilpa/console/compare/v0.6.0...v0.6.1) (2026-08-01)
 
 

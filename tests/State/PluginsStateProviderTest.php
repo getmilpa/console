@@ -17,6 +17,8 @@ namespace Milpa\Console\Tests\State;
 use Milpa\Container\DIContainer;
 use Milpa\Interfaces\Plugin\PluginInstallerInterface;
 use Milpa\Plugin\Contracts\PluginRecord;
+use Milpa\Attributes\PluginMetadata;
+use Milpa\Plugin\Activation\DeclaredPlugins;
 use Milpa\Plugin\Contracts\PluginRegistryInterface;
 use Milpa\Plugin\Registry\InMemoryPluginRegistry;
 use Milpa\Console\State\PluginsStateProvider;
@@ -50,9 +52,22 @@ final class PluginsStateProviderTest extends TestCase
         );
     }
 
-    private function container(?PluginRegistryInterface $registry, ?PluginInstallerInterface $installer = null): DIContainer
-    {
+    /**
+     * @param list<class-string> $declared Los plugins que el host declara. Importa desde que apagar
+     *                                     exige un evaluador de seguridad: sin lista declarada nadie
+     *                                     puede comprobar si el grafo seguiría cerrando, y la
+     *                                     operación se niega — que es la política, no un accidente
+     *                                     del fixture.
+     */
+    private function container(
+        ?PluginRegistryInterface $registry,
+        ?PluginInstallerInterface $installer = null,
+        array $declared = [ConsolaPluginFixture::class],
+    ): DIContainer {
         $container = new DIContainer();
+        if ($declared !== []) {
+            $container->registerService(DeclaredPlugins::class, new DeclaredPlugins($declared));
+        }
         if ($registry !== null) {
             $container->registerService(PluginRegistryInterface::class, $registry);
         }
@@ -165,4 +180,9 @@ final class PluginsStateProviderTest extends TestCase
             }
         };
     }
+}
+
+#[PluginMetadata(version: '1.0.0', author: 'a', site: 'https://e.com', name: 'OAuthPlugin', type: 'Service')]
+final class ConsolaPluginFixture
+{
 }

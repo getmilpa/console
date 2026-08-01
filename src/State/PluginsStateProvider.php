@@ -18,7 +18,9 @@ use Milpa\Command\Operation;
 use Milpa\Interfaces\Di\DIContainerInterface;
 use Milpa\Interfaces\Plugin\PluginInstallerInterface;
 use Milpa\Plugin\Contracts\PluginRegistryInterface;
+use Milpa\Plugin\Activation\DeclaredPlugins;
 use Milpa\Plugin\Operations\PluginOperations;
+use Milpa\Plugin\Runtime\MetadataActivationSafety;
 
 /**
  * El estado de la sección "Plugins": qué plugins tiene este host y cuáles arrancan.
@@ -54,9 +56,21 @@ final readonly class PluginsStateProvider implements SectionStateProvider
 
         $installer = $container->tryGet(PluginInstallerInterface::class);
 
+        // El evaluador de seguridad al apagar, igual que en la terminal. Sin esta línea la TUI era
+        // otra puerta al mismo defecto: `plugins.disable` sin nadie que compruebe si el grafo
+        // seguiría cerrando. Que una superficie ofrezca lo que la otra niega es precisamente lo que
+        // este repositorio lleva semanas quitando — cuatro comparadores de capacidad, dos sistemas de
+        // aprobación, y ahora dos puertas al mismo apagado.
+        $declared = $container->tryGet(DeclaredPlugins::class);
+        $safety = $declared instanceof DeclaredPlugins && $declared->classes !== []
+            ? new MetadataActivationSafety($declared->classes, $registry)
+            : null;
+
         return new self((new PluginOperations(
             $registry,
             $installer instanceof PluginInstallerInterface ? $installer : null,
+            $declared instanceof DeclaredPlugins ? $declared->classes : [],
+            $safety,
         ))->operations());
     }
 

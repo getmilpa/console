@@ -278,4 +278,66 @@ final class HttpProjectorTest extends TestCase
         self::assertSame(200, $projector->handle($this->matched($projector, 'GET', '/libre', ''))->getStatusCode());
         self::assertFalse($consultada);
     }
+
+    /**
+     * SIN actor autenticado, el contexto NO trae actor — y jamás el proceso del servidor en su lugar.
+     *
+     * Es el falsificador que nombró Rod: «HTTP autorizado, pero el evento registra www-data». Poner el
+     * ejecutor donde iba una persona convierte una cadena de custodia real en una falsa, y una
+     * operación que exija atribución tiene que poder negarse en vez de firmar por el servidor.
+     */
+    public function testWithoutAnAuthenticatedActorTheContextCarriesNoneAndNeverTheServerProcess(): void
+    {
+        $psr17 = new \Nyholm\Psr7\Factory\Psr17Factory();
+        $proyector = new HttpProjector([], $this->createMock(DIContainerInterface::class), $psr17, $psr17);
+        $metodo = new \ReflectionMethod($proyector, 'contextoDe');
+
+        $ctx = $metodo->invoke(
+            $proyector,
+            new ServerRequest('POST', '/whatever'),
+            new Operation('x', 'x', static fn (array $i): array => $i),
+        );
+
+        self::assertNull($ctx->actor, 'sin identidad no se inventa una');
+        self::assertFalse($ctx->verified);
+        self::assertFalse($ctx->isAttributable(), 'y una operación que exija atribución puede negarse');
+        self::assertNotNull($ctx->executor, 'el ejecutor sí se conoce — al lado, no en lugar de');
+        self::assertNotSame($ctx->executor, $ctx->actor);
+    }
+
+    /**
+     * CON actor autenticado, el contexto lo trae verificado y nombra la decisión que lo autorizó.
+     *
+     * El actor se lee del atributo de la petición y no de una clase: este paquete no depende de
+     * `milpa/auth` y no debe — acoplarlo obligaría a que cualquiera que sirva operaciones por HTTP se
+     * traiga el sistema de identidad.
+     */
+    public function testWithAnAuthenticatedActorTheContextCarriesItVerified(): void
+    {
+        $auth = new class () {
+            public object $actor;
+
+            public function __construct()
+            {
+                $this->actor = new class () {
+                    public string $id = 'member:42';
+                };
+            }
+        };
+
+        $psr17 = new \Nyholm\Psr7\Factory\Psr17Factory();
+        $proyector = new HttpProjector([], $this->createMock(DIContainerInterface::class), $psr17, $psr17);
+        $metodo = new \ReflectionMethod($proyector, 'contextoDe');
+
+        $ctx = $metodo->invoke(
+            $proyector,
+            (new ServerRequest('POST', '/whatever'))->withAttribute('milpa.auth', $auth),
+            new Operation('agent:answer', 'x', static fn (array $i): array => $i),
+        );
+
+        self::assertSame('actor:member:42', $ctx->actor);
+        self::assertTrue($ctx->verified);
+        self::assertSame('web', $ctx->channel);
+        self::assertSame('agent:answer', $ctx->authorizationId, 'la decisión que autorizó tiene nombre');
+    }
 }

@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Milpa\Console\Http;
 
 use Milpa\Command\HttpRouteModel;
+use Milpa\Command\InvocationContext;
 use Milpa\Command\Operation;
 use Milpa\Command\OperationHttpPolicy;
 use Milpa\Command\SurfaceProjector;
@@ -222,7 +223,8 @@ final class HttpProjector implements SurfaceProjector
         // Por el runner, como las otras tres superficies: es donde viven los ganchos y el veredicto.
         try {
             /** @var mixed $data */
-            $data = (new OperationRunner($this->container, $this->dispatcher))->run($op, $input, 'http');
+            $data = (new OperationRunner($this->container, $this->dispatcher))
+                ->run($op, $input, 'http', $this->contextoDe($request, $op));
         } catch (OperationStoppedException $e) {
             // Detenida por un listener: 409, porque no es culpa de quien llamó ni un error del
             // servidor — es un estado que impide correrla ahora.
@@ -232,6 +234,56 @@ final class HttpProjector implements SurfaceProjector
         }
 
         return $this->json($op->mutating ? 201 : 200, $data);
+    }
+
+    /**
+     * Quién está corriendo esto, traducido de lo que la autenticación ya dejó en la petición.
+     *
+     * ── POR QUÉ AQUÍ Y NO EN EL CONTENEDOR ──────────────────────────────────────────────────────
+     *
+     * Porque la identidad es de la PETICIÓN y el contenedor es de la aplicación. Guardarla ahí crea
+     * estado ambiental: una operación puede olvidarse de leer al actor y seguir funcionando, y el
+     * contenedor puede conservar el de la petición anterior. Aquí se traduce y viaja.
+     *
+     * ── LO QUE SE TRADUCE Y LO QUE SE DEJA ──────────────────────────────────────────────────────
+     *
+     * Del `AuthContext` sale **quién** y **si se verificó**. Los scopes NO cruzan: ya sirvieron para
+     * que la política autorizara, y una operación que puede leerlos es una que puede volver a decidir
+     * con ellos. La política autoriza; la operación atribuye.
+     *
+     * Sin actor autenticado se devuelve un contexto **sin actor** —no uno con el proceso del servidor
+     * en su lugar—. Poner `www-data` donde iba una persona convierte una cadena de custodia real en
+     * una falsa, y una operación que exija atribución tiene que poder negarse.
+     */
+    private function contextoDe(ServerRequestInterface $request, Operation $op): InvocationContext
+    {
+        // SE LEE EL ATRIBUTO, NO LA CLASE. Este paquete no depende de `milpa/auth` y no debe:
+        // acoplarlo obligaría a que cualquiera que quiera servir operaciones por HTTP se traiga el
+        // sistema de identidad. El atributo `milpa.auth` es la costura, y quien lo pone declara su
+        // forma — un actor con `id`. Sin esa forma, no hay actor.
+        $auth = $request->getAttribute('milpa.auth');
+        $ejecutor = (getenv('USER') ?: getenv('USERNAME') ?: 'desconocido') . '@' . (gethostname() ?: 'desconocido');
+        $actor = \is_object($auth) && property_exists($auth, 'actor') ? $auth->actor : null;
+        $actorId = \is_object($actor) && property_exists($actor, 'id') && \is_string($actor->id) ? $actor->id : null;
+
+        if ($actorId !== null && $actorId !== '') {
+            return InvocationContext::web(
+                actor: 'actor:' . $actorId,
+                // LA DECISIÓN QUE AUTORIZÓ, nombrada. Sin esto «autorizado» es una palabra: la
+                // operación se nombra a sí misma como la decisión bajo la que corrió.
+                authorizationId: $op->name,
+                executor: $ejecutor,
+                correlationId: $request->getHeaderLine('X-Request-Id') ?: null,
+            );
+        }
+
+        return new InvocationContext(
+            actor: null,
+            verified: false,
+            channel: 'web',
+            executor: $ejecutor,
+            correlationId: $request->getHeaderLine('X-Request-Id') ?: null,
+        );
     }
 
     /**

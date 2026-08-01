@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Milpa\Console;
 
+use Milpa\Command\InvocationContext;
 use Milpa\Command\Operation;
 use Milpa\Console\Events\OperationExecutedEvent;
 use Milpa\Console\Events\OperationExecutingEvent;
@@ -68,8 +69,12 @@ final readonly class OperationRunner
      *
      * @throws \Throwable lo que el handler lance, después de emitir `operation.executed`
      */
-    public function run(Operation $operation, array $input, string $surface): mixed
-    {
+    public function run(
+        Operation $operation,
+        array $input,
+        string $surface,
+        ?InvocationContext $context = null,
+    ): mixed {
         $slot = new InterceptionSlot();
         $this->dispatcher?->dispatch(
             'operation.executing',
@@ -97,7 +102,7 @@ final readonly class OperationRunner
         }
 
         try {
-            $resultado = $this->invoke($operation, $input);
+            $resultado = $this->invoke($operation, $input, $context);
         } catch (\Throwable $e) {
             // Se audita el fracaso ANTES de propagarlo: un error que no deja rastro es el que nadie
             // encuentra al día siguiente.
@@ -139,11 +144,18 @@ final readonly class OperationRunner
     /**
      * @param array<string, mixed> $input
      */
-    private function invoke(Operation $operation, array $input): mixed
+    private function invoke(Operation $operation, array $input, ?InvocationContext $context = null): mixed
     {
+        // EL CONTEXTO VIAJA COMO SEGUNDO ARGUMENTO, y ésa es toda la mecánica: un handler que no lo
+        // declara simplemente lo ignora —PHP no se queja de un argumento de más— y uno que sí lo
+        // declara lo recibe por el mismo camino explícito que su entrada.
+        //
+        // La alternativa era el contenedor, y la descartó Rod con el argumento que la cierra: con
+        // estado ambiental, OLVIDARSE de leer al actor no falla. Y lo que no falla al olvidarse
+        // termina olvidado.
         $handler = $operation->handler;
         if (\is_callable($handler)) {
-            return $handler($input);
+            return $handler($input, $context);
         }
 
         [$clase, $metodo] = $handler;
@@ -152,7 +164,7 @@ final readonly class OperationRunner
             throw new \RuntimeException("operation '{$operation->name}': {$clase} did not resolve to an object.");
         }
 
-        return $instancia->{$metodo}($input);
+        return $instancia->{$metodo}($input, $context);
     }
 
     /**

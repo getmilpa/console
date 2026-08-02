@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/getmilpa/console/compare/v0.7.1...v0.7.2) (2026-08-02)
+
+
+### Bug Fixes
+
+* widen the milpa/live-tui pin to accept the 0.5 minor ([2756839](https://github.com/getmilpa/console/commit/2756839cc389175cea54208f22e3e246f8a84c9c))
+
 ## [0.7.1](https://github.com/getmilpa/console/compare/v0.7.0...v0.7.1) (2026-08-02)
 
 

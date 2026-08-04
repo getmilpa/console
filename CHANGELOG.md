@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.4](https://github.com/getmilpa/console/compare/v0.7.3...v0.7.4) (2026-08-04)
+
+
+### Bug Fixes
+
+* **deps:** admite milpa/live-tui ^0.6 ([a7883f0](https://github.com/getmilpa/console/commit/a7883f08bbafce7acfb4e0b78885491717e39c6a))
+
 ## [0.7.3](https://github.com/getmilpa/console/compare/v0.7.2...v0.7.3) (2026-08-04)
 
 

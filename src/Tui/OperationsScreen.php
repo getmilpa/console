@@ -173,8 +173,35 @@ final class OperationsScreen
         $enfocado = $this->loop->focusedId();
         $hijos = [];
 
+        // ── LA VENTANA, Y POR QUÉ EXISTE ────────────────────────────────────────────────────────
+        //
+        // Esta pantalla metía TODAS las operaciones en una caja de alto fijo. Mientras el catálogo
+        // cupo, se vio bien; el día que lo pasó por una sola operación el menú salió **en blanco** —
+        // marco, encabezado y pie, y nada en medio—. No truncó: desapareció.
+        //
+        // Un desbordamiento que se ve como una lista vacía es peor que uno que se ve feo: dice «esta
+        // app no tiene operaciones» y eso es falso. Y estaba a UNA operación de pasar, así que iba a
+        // pasar el día que alguien instalara una capacidad más.
+        //
+        // La ventana sigue al foco y DICE cuántas quedan fuera. Que sobre trabajo no se esconde:
+        // ocultar en silencio es la misma sustitución de siempre, la parte por el todo.
+        $porVer = max(3, $this->height - 6);
+        $indice = 0;
+        foreach ($this->operaciones as $i => $operacion) {
+            if ('op:' . $operacion->name === $enfocado) {
+                $indice = $i;
+            }
+        }
+        $total = \count($this->operaciones);
+        $desde = max(0, min($indice - intdiv($porVer, 2), $total - $porVer));
+        $hasta = min($total, $desde + $porVer);
+
+        if ($desde > 0) {
+            $hijos[] = new TuiNode('antes', 'text', props: ['text' => '    ↑ ' . $desde . ' más arriba']);
+        }
+
         $grupoAnterior = null;
-        foreach ($this->operaciones as $operacion) {
+        foreach (\array_slice($this->operaciones, $desde, $hasta - $desde) as $operacion) {
             $grupo = $operacion->mutating ? 'Cambian algo' : 'Consultan';
             if ($grupo !== $grupoAnterior) {
                 $hijos[] = new TuiNode('grupo:' . $grupo, 'text', props: ['text' => $grupo . ':']);
@@ -186,6 +213,10 @@ final class OperationsScreen
             $hijos[] = new TuiNode($id, 'text', props: [
                 'text' => ($id === $enfocado ? '  ▸ ' : '    ') . $operacion->name . $firma . '  — ' . $operacion->description,
             ]);
+        }
+
+        if ($hasta < $total) {
+            $hijos[] = new TuiNode('despues', 'text', props: ['text' => '    ↓ ' . ($total - $hasta) . ' más abajo']);
         }
 
         if ($hijos === []) {

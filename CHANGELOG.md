@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.3](https://github.com/getmilpa/console/compare/v0.7.2...v0.7.3) (2026-08-04)
+
+
+### Bug Fixes
+
+* **deps:** publica el rango ensanchado de milpa/plugin ([3c7eb34](https://github.com/getmilpa/console/commit/3c7eb34a8d0ad69b43dbc0093f00eefcbabc4734))
+
 ## [0.7.2](https://github.com/getmilpa/console/compare/v0.7.1...v0.7.2) (2026-08-02)
 
 

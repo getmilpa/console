@@ -26,7 +26,7 @@
     "milpa/core": "^0.6.2 || ^0.7",
     "milpa/http": "^0.1.5",
     "milpa/live": "^0.4",
-    "milpa/live-tui": "^0.4 || ^0.5 || ^0.6",
+    "milpa/live-tui": "^0.4 || ^0.5 || ^0.6 || ^0.7",
     "milpa/plugin": "^0.7 || ^0.8 || ^0.9",
     "milpa/tool-runtime": "^0.9",
     "psr/http-factory": "^1.0",

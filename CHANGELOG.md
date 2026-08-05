@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.6](https://github.com/getmilpa/console/compare/v0.7.5...v0.7.6) (2026-08-05)
+
+
+### Bug Fixes
+
+* **deps:** el rango de milpa/command admite 0.6 ([94f8bd6](https://github.com/getmilpa/console/commit/94f8bd65702353f430c556faf2f2a46a8dddc772))
+
 ## [0.7.5](https://github.com/getmilpa/console/compare/v0.7.4...v0.7.5) (2026-08-05)
 
 

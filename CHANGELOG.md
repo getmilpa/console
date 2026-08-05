@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.5](https://github.com/getmilpa/console/compare/v0.7.4...v0.7.5) (2026-08-05)
+
+
+### Bug Fixes
+
+* **deps:** el rango de milpa/live-tui admite 0.7 ([b515123](https://github.com/getmilpa/console/commit/b51512332ebf01eb0b5a73fbd0674466a57897db))
+
 ## [0.7.4](https://github.com/getmilpa/console/compare/v0.7.3...v0.7.4) (2026-08-04)
 
 

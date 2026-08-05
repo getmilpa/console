@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.7](https://github.com/getmilpa/console/compare/v0.7.6...v0.7.7) (2026-08-05)
+
+
+### Bug Fixes
+
+* **deps:** el rango de milpa/plugin admite 0.10 ([7b4399b](https://github.com/getmilpa/console/commit/7b4399b9db9ba718fc153a12753dd5e9efa9915c))
+
 ## [0.7.6](https://github.com/getmilpa/console/compare/v0.7.5...v0.7.6) (2026-08-05)
 
 

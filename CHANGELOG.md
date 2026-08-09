@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.8](https://github.com/getmilpa/console/compare/v0.7.7...v0.7.8) (2026-08-09)
+
+
+### Bug Fixes
+
+* every surface decides consent by the same rule, and one file decides it ([7a34ab7](https://github.com/getmilpa/console/commit/7a34ab757917d584a3883df288b01d9524d0fb73))
+
 ## [0.7.7](https://github.com/getmilpa/console/compare/v0.7.6...v0.7.7) (2026-08-05)
 
 

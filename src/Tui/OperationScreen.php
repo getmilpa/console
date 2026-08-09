@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Milpa\Console\Tui;
 
 use Milpa\Command\Operation;
+use Milpa\Console\Consent;
 use Milpa\Console\Rendering\CliRenderer;
 use Milpa\Console\Rendering\PlainTextCliRenderer;
 use Milpa\Console\OperationRunner;
@@ -212,7 +213,7 @@ final class OperationScreen
      */
     private function correr(): void
     {
-        if ($this->operacion->mutating && $this->operacion->requiresConfirmation) {
+        if (Consent::demanded($this->operacion)) {
             $this->estado = 'firma-requerida';
             $this->ok = false;
             $this->salida = [

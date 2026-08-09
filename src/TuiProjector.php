@@ -89,7 +89,7 @@ final class TuiProjector implements SurfaceProjector
             );
         }
 
-        if ($op->mutating && $op->requiresConfirmation) {
+        if (Consent::demanded($op)) {
             $hijos[] = new TuiNode('firma', 'badge', props: [
                 'text' => 'requiere firma',
                 'tone' => 'warning',

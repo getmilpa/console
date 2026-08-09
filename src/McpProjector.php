@@ -104,7 +104,7 @@ final class McpProjector implements SurfaceProjector
             handler: $op->handler,
             scopes: $op->scopes,
             mutating: $op->mutating,
-            requiresConfirmation: $op->requiresConfirmation,
+            requiresConfirmation: Consent::demanded($op),
             version: $op->version,
             outputSchema: $op->outputSchema,
             operation: $op,

@@ -20,6 +20,7 @@ use Milpa\Command\Operation;
 use Milpa\Command\OperationHttpPolicy;
 use Milpa\Command\SurfaceProjector;
 use Milpa\Console\ConfirmTokenStore;
+use Milpa\Console\Consent;
 use Milpa\Console\OperationRunner;
 use Milpa\Console\OperationStoppedException;
 use Milpa\Console\SchemaCoercer;
@@ -185,7 +186,7 @@ final class HttpProjector implements SurfaceProjector
             }
         }
 
-        if ($op->mutating && $op->requiresConfirmation) {
+        if (Consent::demanded($op)) {
             $token = $request->getHeaderLine('Confirm-Token');
             if ($token === '') {
                 return $this->json(428, [

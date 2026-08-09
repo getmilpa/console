@@ -161,7 +161,7 @@ final class CliRunner
             return 1;
         }
 
-        if ($op->mutating && $op->requiresConfirmation) {
+        if (Consent::demanded($op)) {
             // The input has to be derived first now, which is the whole reason the order changed:
             // `--yes` could be answered before knowing what the arguments were, because it never
             // referred to them. A signature is over the arguments, so there is nothing to sign

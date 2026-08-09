@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Milpa\Console\Tui;
 
 use Milpa\Command\Operation;
+use Milpa\Console\Consent;
 use Milpa\Live\Tui\NodeRenderers\BoxRenderer;
 use Milpa\Live\Tui\NodeRenderers\TextRenderer;
 use Milpa\Live\Tui\RetainedTuiLoop;
@@ -209,7 +210,7 @@ final class OperationsScreen
             }
 
             $id = 'op:' . $operacion->name;
-            $firma = $operacion->requiresConfirmation ? ' ⚠' : '';
+            $firma = Consent::demanded($operacion) ? ' ⚠' : '';
             $hijos[] = new TuiNode($id, 'text', props: [
                 'text' => ($id === $enfocado ? '  ▸ ' : '    ') . $operacion->name . $firma . '  — ' . $operacion->description,
             ]);

@@ -72,7 +72,7 @@ final class CliProjector implements SurfaceProjector
             name: $op->name,
             description: $op->description,
             flags: $flags,
-            needsSignature: $op->mutating && $op->requiresConfirmation,
+            needsSignature: Consent::demanded($op),
         );
     }
 }

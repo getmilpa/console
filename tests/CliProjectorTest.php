@@ -16,6 +16,12 @@ namespace Milpa\Console\Tests;
 
 use Milpa\Console\CliProjector;
 use Milpa\Console\CliRunner;
+use Milpa\Command\Effect\Authority;
+use Milpa\Command\Effect\EffectProfile;
+use Milpa\Command\Effect\Externality;
+use Milpa\Command\Effect\Mutation;
+use Milpa\Command\Effect\Reversibility;
+use Milpa\Command\Effect\Subject;
 use Milpa\Command\Operation;
 use Milpa\Interfaces\Di\DIContainerInterface;
 use PHPUnit\Framework\TestCase;
@@ -37,7 +43,16 @@ final class CliProjectorTest extends TestCase
         $op = new Operation('create_post', 'Create', static fn (array $i): array => $i, inputSchema: [
             'type' => 'object',
             'properties' => ['title' => ['type' => 'string'], 'priority' => ['type' => 'integer']],
-        ]);
+        ],
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
 
         $input = $this->projector->deriveInput($op, ['--title=Hi', '--priority=3']);
 
@@ -60,7 +75,16 @@ final class CliProjectorTest extends TestCase
         $op = new Operation('echo', 'Echo', static fn (array $i): array => ['got' => $i], inputSchema: [
             'type' => 'object',
             'properties' => ['n' => ['type' => 'integer']],
-        ]);
+        ],
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
 
         $code = $this->projector->run($op, ['--n=42'], $this->container, static function (string $l) use (&$lines): void {
             $lines[] = $l;
@@ -86,7 +110,16 @@ final class CliProjectorTest extends TestCase
                 'producer' => ['type' => 'array'],
                 'actor' => ['type' => 'string'],
             ],
-        ]);
+        ],
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
 
         $input = $this->projector->deriveInput($op, ['--producer=a', '--producer=b', '--actor=x', '--actor=y']);
 
@@ -105,14 +138,32 @@ final class CliProjectorTest extends TestCase
         $op = new Operation('history', 'History', static fn (array $i): array => $i, inputSchema: [
             'type' => 'object',
             'properties' => ['producer' => ['type' => 'array']],
-        ]);
+        ],
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
 
         self::assertSame(['producer' => ['solo-uno']], $this->projector->deriveInput($op, ['--producer=solo-uno']));
     }
 
     public function testNullSchemaKeepsTheRawStringBag(): void
     {
-        $op = new Operation('legacy', 'Legacy', static fn (array $i): array => $i); // inputSchema null
+        $op = new Operation('legacy', 'Legacy', static fn (array $i): array => $i,
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        ); // inputSchema null
 
         $code = $this->projector->run($op, ['--a=1', '--b=x'], $this->container, static fn (string $l) => null);
 
@@ -131,7 +182,16 @@ final class CliProjectorTest extends TestCase
             $ran = true;
 
             return 0;
-        }, mutating: true, requiresConfirmation: true);
+        }, mutating: true, requiresConfirmation: true,
+            effects: new EffectProfile(
+                mutation: Mutation::Persistent,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::Data,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
 
         $code = $this->projector->run($op, ['--yes'], $this->container, static function (string $l) use (&$lines): void {
             $lines[] = $l;
@@ -146,8 +206,26 @@ final class CliProjectorTest extends TestCase
     {
         // The projector registry routes by these two answers. A projector that
         // claimed every operation would run HTTP-only ones from the terminal.
-        $solaCli = new Operation('solo_cli', 'Solo CLI', static fn (array $i): array => $i, surfaces: ['cli']);
-        $solaHttp = new Operation('solo_http', 'Solo HTTP', static fn (array $i): array => $i, surfaces: ['http']);
+        $solaCli = new Operation('solo_cli', 'Solo CLI', static fn (array $i): array => $i, surfaces: ['cli'],
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
+        $solaHttp = new Operation('solo_http', 'Solo HTTP', static fn (array $i): array => $i, surfaces: ['http'],
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
 
         // El projector, no el runner: `surface()` y `supports()` se quedaron en la mitad pura.
         $projector = new CliProjector();
@@ -170,7 +248,16 @@ final class CliProjectorTest extends TestCase
         }, inputSchema: [
             'type' => 'object',
             'properties' => ['n' => ['type' => 'integer']],
-        ]);
+        ],
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
 
         $code = $this->projector->run($op, ['--n=muchos'], $this->container, static function (string $l) use (&$lines): void {
             $lines[] = $l;
@@ -202,6 +289,15 @@ final class CliProjectorTest extends TestCase
                 ],
                 'required' => ['title'],
             ],
+        
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
 
         $modelo = (new CliProjector())->project($op);
@@ -224,8 +320,26 @@ final class CliProjectorTest extends TestCase
     public function test_el_modelo_anuncia_si_la_operacion_exige_firma(): void
     {
         $p = new CliProjector();
-        $conFirma = new Operation('borrar', 'x', static fn (array $i) => $i, mutating: true, requiresConfirmation: true);
-        $sinFirma = new Operation('tocar', 'x', static fn (array $i) => $i, mutating: true);
+        $conFirma = new Operation('borrar', 'x', static fn (array $i) => $i, mutating: true, requiresConfirmation: true,
+            effects: new EffectProfile(
+                mutation: Mutation::Persistent,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::Data,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
+        $sinFirma = new Operation('tocar', 'x', static fn (array $i) => $i, mutating: true,
+            effects: new EffectProfile(
+                mutation: Mutation::Persistent,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::Data,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
 
         self::assertTrue($p->project($conFirma)->needsSignature);
         self::assertFalse($p->project($sinFirma)->needsSignature);
@@ -234,7 +348,16 @@ final class CliProjectorTest extends TestCase
     /** Una operación sin esquema no tiene banderas que anunciar, y eso no es un error. */
     public function test_una_operacion_sin_esquema_proyecta_sin_banderas(): void
     {
-        $modelo = (new CliProjector())->project(new Operation('ping', 'x', static fn () => null));
+        $modelo = (new CliProjector())->project(new Operation('ping', 'x', static fn () => null,
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        ));
 
         self::assertSame([], $modelo->flags);
         self::assertSame(

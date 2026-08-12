@@ -14,6 +14,12 @@ declare(strict_types=1);
 
 namespace Milpa\Console\Tests;
 
+use Milpa\Command\Effect\Authority;
+use Milpa\Command\Effect\EffectProfile;
+use Milpa\Command\Effect\Externality;
+use Milpa\Command\Effect\Mutation;
+use Milpa\Command\Effect\Reversibility;
+use Milpa\Command\Effect\Subject;
 use Milpa\Command\Operation;
 use Milpa\Command\SurfaceModel;
 use Milpa\Console\TuiProjector;
@@ -44,6 +50,15 @@ final class TuiProjectorTest extends TestCase
             ],
             mutating: true,
             requiresConfirmation: true,
+        
+            effects: new EffectProfile(
+                mutation: Mutation::Persistent,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::Data,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
     }
 
@@ -52,8 +67,26 @@ final class TuiProjectorTest extends TestCase
         $p = new TuiProjector();
 
         self::assertSame('tui', $p->surface());
-        self::assertTrue($p->supports(new Operation('a', 'x', static fn () => null)));
-        self::assertFalse($p->supports(new Operation('b', 'x', static fn () => null, surfaces: ['cli'])));
+        self::assertTrue($p->supports(new Operation('a', 'x', static fn () => null,
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        )));
+        self::assertFalse($p->supports(new Operation('b', 'x', static fn () => null, surfaces: ['cli'],
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        )));
     }
 
     public function test_proyecta_un_panel_con_un_campo_por_propiedad_del_esquema(): void
@@ -104,7 +137,16 @@ final class TuiProjectorTest extends TestCase
     /** Una operación que no exige firma no anuncia una que no hay. */
     public function test_sin_firma_no_hay_aviso_de_firma(): void
     {
-        $suave = new Operation('listar', 'Lista posts', static fn (array $i): array => $i);
+        $suave = new Operation('listar', 'Lista posts', static fn (array $i): array => $i,
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
 
         $ids = array_map(
             static fn (TuiNode $n): string => $n->id,

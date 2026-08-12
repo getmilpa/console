@@ -14,6 +14,12 @@ declare(strict_types=1);
 
 namespace Milpa\Console\Tests;
 
+use Milpa\Command\Effect\Authority;
+use Milpa\Command\Effect\EffectProfile;
+use Milpa\Command\Effect\Externality;
+use Milpa\Command\Effect\Mutation;
+use Milpa\Command\Effect\Reversibility;
+use Milpa\Command\Effect\Subject;
 use Milpa\Command\Operation;
 use Milpa\Console\Events\OperationExecutedEvent;
 use Milpa\Console\Events\OperationExecutingEvent;
@@ -101,6 +107,15 @@ final class OperationRunnerTest extends TestCase
             description: 'Algo',
             handler: static fn (array $i): array => ['ok' => true, 'eco' => $i['x'] ?? null],
             inputSchema: ['type' => 'object', 'properties' => ['x' => ['type' => 'string']]],
+        
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
     }
 
@@ -144,6 +159,15 @@ final class OperationRunnerTest extends TestCase
                 return ['ok' => true, 'de' => 'el handler'];
             },
             inputSchema: ['type' => 'object', 'properties' => []],
+        
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
 
         $vistos = [];
@@ -185,6 +209,15 @@ final class OperationRunnerTest extends TestCase
             },
             inputSchema: ['type' => 'object', 'properties' => []],
             mutating: true,
+        
+            effects: new EffectProfile(
+                mutation: Mutation::Persistent,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::Data,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
 
         $vistos = [];
@@ -222,6 +255,15 @@ final class OperationRunnerTest extends TestCase
                 throw new \RuntimeException('se cayó la base');
             },
             inputSchema: ['type' => 'object', 'properties' => []],
+        
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
 
         $vistos = [];
@@ -246,6 +288,15 @@ final class OperationRunnerTest extends TestCase
             description: 'Por contenedor',
             handler: [\stdClass::class, 'hazlo'],
             inputSchema: ['type' => 'object', 'properties' => []],
+        
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
 
         $vistos = [];
@@ -294,6 +345,15 @@ final class OperationRunnerTest extends TestCase
             handler: static fn (array $i): array => ['ok' => true],
             inputSchema: ['type' => 'object', 'properties' => []],
             path: '/ping',
+        
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
         $contenedor = new \Milpa\Container\DIContainer();
         $psr17 = new \Nyholm\Psr7\Factory\Psr17Factory();

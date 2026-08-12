@@ -14,6 +14,12 @@ declare(strict_types=1);
 
 namespace Milpa\Console\Tests\Tui;
 
+use Milpa\Command\Effect\Authority;
+use Milpa\Command\Effect\EffectProfile;
+use Milpa\Command\Effect\Externality;
+use Milpa\Command\Effect\Mutation;
+use Milpa\Command\Effect\Reversibility;
+use Milpa\Command\Effect\Subject;
 use Milpa\Command\Operation;
 use Milpa\Console\Tui\OperationScreen;
 use PHPUnit\Framework\TestCase;
@@ -57,6 +63,18 @@ final class OperationScreenTest extends TestCase
             ],
             mutating: $muta,
             requiresConfirmation: $firma,
+        
+            // The profile FOLLOWS the flag rather than guessing it: Operation refuses a probe that
+            // declares mutating: true beside mutation: none, and it is right to — a consumer cannot
+            // be asked which of the two lies.
+            effects: new EffectProfile(
+                mutation: $muta ? Mutation::Persistent : Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: $muta ? Subject::Data : Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
     }
 
@@ -162,6 +180,15 @@ final class OperationScreenTest extends TestCase
             description: 'Algo',
             handler: static fn (array $i): array => ['ok' => false, 'error' => 'no se pudo'],
             inputSchema: ['type' => 'object', 'properties' => []],
+        
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
         $pantalla = new OperationScreen($op, $this->container(), 60, 12, false);
         $pantalla->press('enter');
@@ -187,6 +214,15 @@ final class OperationScreenTest extends TestCase
                 'properties' => ['cuantos' => ['type' => 'integer']],
                 'required' => ['cuantos'],
             ],
+        
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
         $pantalla = new OperationScreen($op, $this->container(), 60, 12, false);
         $this->teclear($pantalla, 'no-es-un-numero');
@@ -206,6 +242,15 @@ final class OperationScreenTest extends TestCase
                 throw new \RuntimeException('se cayó la base');
             },
             inputSchema: ['type' => 'object', 'properties' => []],
+        
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
         $pantalla = new OperationScreen($op, $this->container(), 60, 12, false);
         $pantalla->press('enter');

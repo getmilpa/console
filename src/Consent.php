@@ -54,7 +54,10 @@ final class Consent
      * terminal, a confirmation token over MCP and HTTP, a badge and a keystroke in the TUI — and
      * never WHETHER it is needed.
      */
-    public static function demanded(Operation $op): bool
+    /**
+     * @param array<string, mixed> $arguments the invocation's arguments, empty on catalogue surfaces
+     */
+    public static function demanded(Operation $op, array $arguments = []): bool
     {
         if ($op->requiresConfirmation) {
             return true;
@@ -74,7 +77,19 @@ final class Consent
         // Weight is the scale the enum already declares, and it is the only form that stays right
         // when a level is added: enumerating the dangerous forgets the new one, negating the safe
         // catches a new mild one by mistake, and the scale does neither.
-        $techo = $op->effectCeiling();
+        // THE CEILING IS RESOLVED FOR THIS CALL, not for the operation in the abstract.
+        //
+        // S2 judges the operation, so a rehearsal carried the same ceiling as the real thing and
+        // `capabilities:enable --dry-run --json` asked for a signature it had nothing to sign for.
+        // `command v0.8.0` added the descent field for exactly this, and greenhouse evidence/0152
+        // measured that nothing was reading it: the field existed, and a field is not a mechanism.
+        //
+        // WITH NO ARGUMENTS THE CEILING STAYS UP, and that is deliberate. Four of this package's
+        // call sites list, project or paint operations with no invocation in hand, so there is
+        // nothing to read and nothing may come down — greenhouse decisions/0029 rule 3, that a
+        // descent with nothing holding it up lowers nothing. A conservative listing errs toward the
+        // safe side; an optimistic one promises not to ask and then asks.
+        $techo = $op->effectCeiling()->forCall($arguments);
 
         return $techo->subject->weight() >= Subject::Executable->weight()
             && $techo->authority->weight() >= Authority::Privileged->weight();

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/getmilpa/console/compare/v0.8.0...v0.9.0) (2026-08-12)
+
+
+### Features
+
+* consent is decided for the call, not for the operation in the abstract ([#28](https://github.com/getmilpa/console/issues/28)) ([6bc662f](https://github.com/getmilpa/console/commit/6bc662fb9b8004024d8da927519bec863c9c0e7e))
+
 ## [0.8.0](https://github.com/getmilpa/console/compare/v0.7.10...v0.8.0) (2026-08-12)
 
 

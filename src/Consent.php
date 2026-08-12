@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace Milpa\Console;
 
+use Milpa\Command\Effect\Authority;
+use Milpa\Command\Effect\Subject;
 use Milpa\Command\Operation;
 
 /**
@@ -54,6 +56,27 @@ final class Consent
      */
     public static function demanded(Operation $op): bool
     {
-        return $op->requiresConfirmation;
+        if ($op->requiresConfirmation) {
+            return true;
+        }
+
+        // RULE S2, wired at last (greenhouse decisions/0019, corrected by decisions/0028).
+        //
+        //   Subject at Executable or above  AND  Authority at Privileged or above  ⇒  consent
+        //
+        // What is being changed decides this, not how much: an operation that changes WHICH CODE WILL
+        // RUN, wielding an authority the caller does not hold on their own, is asking for something
+        // nobody can take back by reading the result.
+        //
+        // BOTH AXES COMPARE BY WEIGHT, and that is the correction. The rule shipped comparing subject
+        // by membership and authority by identity, so `Authority::Unknown` — weight 4, the highest,
+        // the value GOV-05 says counts as the maximum — fell OUTSIDE the rule it was most meant for.
+        // Weight is the scale the enum already declares, and it is the only form that stays right
+        // when a level is added: enumerating the dangerous forgets the new one, negating the safe
+        // catches a new mild one by mistake, and the scale does neither.
+        $techo = $op->effectCeiling();
+
+        return $techo->subject->weight() >= Subject::Executable->weight()
+            && $techo->authority->weight() >= Authority::Privileged->weight();
     }
 }

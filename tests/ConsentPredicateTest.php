@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace Milpa\Console\Tests;
 
+use Milpa\Command\Effect\Authority;
+use Milpa\Command\Effect\EffectProfile;
+use Milpa\Command\Effect\Externality;
+use Milpa\Command\Effect\Mutation;
+use Milpa\Command\Effect\Reversibility;
+use Milpa\Command\Effect\Subject;
 use Milpa\Command\Operation;
 use Milpa\Console\CliProjector;
 use Milpa\Console\Http\HttpProjector;
@@ -104,6 +110,19 @@ final class ConsentPredicateTest extends TestCase
             inputSchema: ['type' => 'object', 'properties' => [], 'required' => []],
             mutating: $mutating,
             requiresConfirmation: $confirmation,
+            // FULLY CLASSIFIED, AND BENIGN, ON PURPOSE.
+            //
+            // This test compares SURFACES, not the content of the rule. Left unclassified, the probe
+            // would carry Unknown on every axis — the maximum, by GOV-05 — and S2 would fire on every
+            // row, so the table would stop telling the surfaces apart and start measuring the rule.
+            effects: new EffectProfile(
+                mutation: $mutating ? Mutation::Persistent : Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: $mutating ? Subject::Data : Subject::None,
+                rollbackContract: 'synthetic probe: nothing is written',
+            ),
         );
     }
 

@@ -161,7 +161,11 @@ final class CliRunner
             return 1;
         }
 
-        if (Consent::demanded($op)) {
+        // THE ARGUMENTS GO IN, because a descent is resolved for a CALL and not for an operation
+        // in the abstract (greenhouse decisions/0029, measured inert in evidence/0152). The input is
+        // already derived above, so this surface has them; the catalogue surfaces do not, and there
+        // the ceiling stays up.
+        if (Consent::demanded($op, $input)) {
             // The input has to be derived first now, which is the whole reason the order changed:
             // `--yes` could be answered before knowing what the arguments were, because it never
             // referred to them. A signature is over the arguments, so there is nothing to sign

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/getmilpa/console/compare/v0.7.10...v0.8.0) (2026-08-12)
+
+
+### Features
+
+* wire rule S2 — consent derived from the ceiling ([#25](https://github.com/getmilpa/console/issues/25)) ([26ed260](https://github.com/getmilpa/console/commit/26ed260c87bca2a20089cf4c37d8cba3cf86fc44))
+
 ## [0.7.10](https://github.com/getmilpa/console/compare/v0.7.9...v0.7.10) (2026-08-12)
 
 

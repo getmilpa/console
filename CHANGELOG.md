@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.10](https://github.com/getmilpa/console/compare/v0.7.9...v0.7.10) (2026-08-12)
+
+
+### Bug Fixes
+
+* accept milpa/plugin ^0.11 so the family can move past 0.10 ([#23](https://github.com/getmilpa/console/issues/23)) ([ddb6639](https://github.com/getmilpa/console/commit/ddb66392202525ce301c0a19ca8f0fcea9d6c658))
+
 ## [0.7.9](https://github.com/getmilpa/console/compare/v0.7.8...v0.7.9) (2026-08-09)
 
 

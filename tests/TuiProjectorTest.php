@@ -50,7 +50,6 @@ final class TuiProjectorTest extends TestCase
             ],
             mutating: true,
             requiresConfirmation: true,
-        
             effects: new EffectProfile(
                 mutation: Mutation::Persistent,
                 externality: Externality::None,
@@ -67,7 +66,10 @@ final class TuiProjectorTest extends TestCase
         $p = new TuiProjector();
 
         self::assertSame('tui', $p->surface());
-        self::assertTrue($p->supports(new Operation('a', 'x', static fn () => null,
+        self::assertTrue($p->supports(new Operation(
+            'a',
+            'x',
+            static fn () => null,
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -77,7 +79,11 @@ final class TuiProjectorTest extends TestCase
                 rollbackContract: 'test probe: nothing leaves this process',
             ),
         )));
-        self::assertFalse($p->supports(new Operation('b', 'x', static fn () => null, surfaces: ['cli'],
+        self::assertFalse($p->supports(new Operation(
+            'b',
+            'x',
+            static fn () => null,
+            surfaces: ['cli'],
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -137,7 +143,10 @@ final class TuiProjectorTest extends TestCase
     /** Una operación que no exige firma no anuncia una que no hay. */
     public function test_sin_firma_no_hay_aviso_de_firma(): void
     {
-        $suave = new Operation('listar', 'Lista posts', static fn (array $i): array => $i,
+        $suave = new Operation(
+            'listar',
+            'Lista posts',
+            static fn (array $i): array => $i,
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,

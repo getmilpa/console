@@ -65,7 +65,6 @@ final class RendererSwapTest extends TestCase
                 'properties' => ['target' => ['type' => 'string']],
                 'required' => ['target'],
             ],
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -104,7 +103,6 @@ final class RendererSwapTest extends TestCase
             name: 'report',
             description: 'Devuelve estructura',
             handler: static fn (array $i): array => ['ok' => true, 'checks' => ['manifest' => 'OK']],
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -144,7 +142,6 @@ final class RendererSwapTest extends TestCase
                 'properties' => ['n' => ['type' => 'integer']],
                 'required' => ['n'],
             ],
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -176,7 +173,10 @@ final class RendererSwapTest extends TestCase
      */
     public function testNothingReturnedPrintsNothingAndAnIntStaysAnExitCode(): void
     {
-        $callado = new Operation('quiet', 'No devuelve nada', static fn (array $i): null => null,
+        $callado = new Operation(
+            'quiet',
+            'No devuelve nada',
+            static fn (array $i): null => null,
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -190,16 +190,19 @@ final class RendererSwapTest extends TestCase
 
         $lines = [];
         $codigo = (new CliRunner(renderer: new PlainTextCliRenderer()))->run(
-            new Operation('coded', 'Reporta por su cuenta', static fn (array $i): int => 3,
-            effects: new EffectProfile(
-                mutation: Mutation::None,
-                externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
-                authority: Authority::Read,
-                subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
+            new Operation(
+                'coded',
+                'Reporta por su cuenta',
+                static fn (array $i): int => 3,
+                effects: new EffectProfile(
+                    mutation: Mutation::None,
+                    externality: Externality::None,
+                    reversibility: Reversibility::Guaranteed,
+                    authority: Authority::Read,
+                    subject: Subject::None,
+                    rollbackContract: 'test probe: nothing leaves this process',
+                ),
             ),
-        ),
             [],
             $this->container,
             static function (string $l) use (&$lines): void {
@@ -227,16 +230,19 @@ final class RendererSwapTest extends TestCase
         $container = $this->container;
         $correr = static function (mixed $devuelve) use ($container): int {
             return (new CliRunner())->run(
-                new Operation('check', 'Diagnostica', static fn (array $i): mixed => $devuelve,
-            effects: new EffectProfile(
-                mutation: Mutation::None,
-                externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
-                authority: Authority::Read,
-                subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
-            ),
-        ),
+                new Operation(
+                    'check',
+                    'Diagnostica',
+                    static fn (array $i): mixed => $devuelve,
+                    effects: new EffectProfile(
+                        mutation: Mutation::None,
+                        externality: Externality::None,
+                        reversibility: Reversibility::Guaranteed,
+                        authority: Authority::Read,
+                        subject: Subject::None,
+                        rollbackContract: 'test probe: nothing leaves this process',
+                    ),
+                ),
                 [],
                 $container,
                 static fn (string $l) => null,
@@ -253,16 +259,19 @@ final class RendererSwapTest extends TestCase
     public function testTheMachineEnvelopeAgreesWithTheVerdict(): void
     {
         $lines = $this->correr(
-            new Operation('check', 'Diagnostica', static fn (array $i): array => ['ok' => false, 'why' => 'x'],
-            effects: new EffectProfile(
-                mutation: Mutation::None,
-                externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
-                authority: Authority::Read,
-                subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
+            new Operation(
+                'check',
+                'Diagnostica',
+                static fn (array $i): array => ['ok' => false, 'why' => 'x'],
+                effects: new EffectProfile(
+                    mutation: Mutation::None,
+                    externality: Externality::None,
+                    reversibility: Reversibility::Guaranteed,
+                    authority: Authority::Read,
+                    subject: Subject::None,
+                    rollbackContract: 'test probe: nothing leaves this process',
+                ),
             ),
-        ),
             new JsonCliRenderer(),
         );
 

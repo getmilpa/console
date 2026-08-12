@@ -40,7 +40,11 @@ final class CliProjectorTest extends TestCase
 
     public function testDerivesTypedInputFromFlagsPerSchema(): void
     {
-        $op = new Operation('create_post', 'Create', static fn (array $i): array => $i, inputSchema: [
+        $op = new Operation(
+            'create_post',
+            'Create',
+            static fn (array $i): array => $i,
+            inputSchema: [
             'type' => 'object',
             'properties' => ['title' => ['type' => 'string'], 'priority' => ['type' => 'integer']],
         ],
@@ -72,7 +76,11 @@ final class CliProjectorTest extends TestCase
     public function testRunInvokesTheHandlerWithCoercedInputAndRendersResult(): void
     {
         $lines = [];
-        $op = new Operation('echo', 'Echo', static fn (array $i): array => ['got' => $i], inputSchema: [
+        $op = new Operation(
+            'echo',
+            'Echo',
+            static fn (array $i): array => ['got' => $i],
+            inputSchema: [
             'type' => 'object',
             'properties' => ['n' => ['type' => 'integer']],
         ],
@@ -104,7 +112,11 @@ final class CliProjectorTest extends TestCase
      */
     public function testRepeatedFlagsBecomeAListWhenTheSchemaSaysArray(): void
     {
-        $op = new Operation('history', 'History', static fn (array $i): array => $i, inputSchema: [
+        $op = new Operation(
+            'history',
+            'History',
+            static fn (array $i): array => $i,
+            inputSchema: [
             'type' => 'object',
             'properties' => [
                 'producer' => ['type' => 'array'],
@@ -135,7 +147,11 @@ final class CliProjectorTest extends TestCase
      */
     public function testASingleOccurrenceIsStillAList(): void
     {
-        $op = new Operation('history', 'History', static fn (array $i): array => $i, inputSchema: [
+        $op = new Operation(
+            'history',
+            'History',
+            static fn (array $i): array => $i,
+            inputSchema: [
             'type' => 'object',
             'properties' => ['producer' => ['type' => 'array']],
         ],
@@ -154,7 +170,10 @@ final class CliProjectorTest extends TestCase
 
     public function testNullSchemaKeepsTheRawStringBag(): void
     {
-        $op = new Operation('legacy', 'Legacy', static fn (array $i): array => $i,
+        $op = new Operation(
+            'legacy',
+            'Legacy',
+            static fn (array $i): array => $i,
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -178,11 +197,16 @@ final class CliProjectorTest extends TestCase
         // {@see CliProjectorSignatureGateTest}; here only the door matters.
         $lines = [];
         $ran = false;
-        $op = new Operation('wipe', 'Wipe', static function (array $i) use (&$ran): int {
-            $ran = true;
+        $op = new Operation(
+            'wipe',
+            'Wipe',
+            static function (array $i) use (&$ran): int {
+                $ran = true;
 
-            return 0;
-        }, mutating: true, requiresConfirmation: true,
+                return 0;
+            },
+            mutating: true,
+            requiresConfirmation: true,
             effects: new EffectProfile(
                 mutation: Mutation::Persistent,
                 externality: Externality::None,
@@ -206,7 +230,11 @@ final class CliProjectorTest extends TestCase
     {
         // The projector registry routes by these two answers. A projector that
         // claimed every operation would run HTTP-only ones from the terminal.
-        $solaCli = new Operation('solo_cli', 'Solo CLI', static fn (array $i): array => $i, surfaces: ['cli'],
+        $solaCli = new Operation(
+            'solo_cli',
+            'Solo CLI',
+            static fn (array $i): array => $i,
+            surfaces: ['cli'],
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -216,7 +244,11 @@ final class CliProjectorTest extends TestCase
                 rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
-        $solaHttp = new Operation('solo_http', 'Solo HTTP', static fn (array $i): array => $i, surfaces: ['http'],
+        $solaHttp = new Operation(
+            'solo_http',
+            'Solo HTTP',
+            static fn (array $i): array => $i,
+            surfaces: ['http'],
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -241,11 +273,15 @@ final class CliProjectorTest extends TestCase
         // business logic as a 0.
         $ran = false;
         $lines = [];
-        $op = new Operation('crear', 'Crear', static function (array $i) use (&$ran): array {
-            $ran = true;
+        $op = new Operation(
+            'crear',
+            'Crear',
+            static function (array $i) use (&$ran): array {
+                $ran = true;
 
-            return $i;
-        }, inputSchema: [
+                return $i;
+            },
+            inputSchema: [
             'type' => 'object',
             'properties' => ['n' => ['type' => 'integer']],
         ],
@@ -289,7 +325,6 @@ final class CliProjectorTest extends TestCase
                 ],
                 'required' => ['title'],
             ],
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -320,7 +355,12 @@ final class CliProjectorTest extends TestCase
     public function test_el_modelo_anuncia_si_la_operacion_exige_firma(): void
     {
         $p = new CliProjector();
-        $conFirma = new Operation('borrar', 'x', static fn (array $i) => $i, mutating: true, requiresConfirmation: true,
+        $conFirma = new Operation(
+            'borrar',
+            'x',
+            static fn (array $i) => $i,
+            mutating: true,
+            requiresConfirmation: true,
             effects: new EffectProfile(
                 mutation: Mutation::Persistent,
                 externality: Externality::None,
@@ -330,7 +370,11 @@ final class CliProjectorTest extends TestCase
                 rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
-        $sinFirma = new Operation('tocar', 'x', static fn (array $i) => $i, mutating: true,
+        $sinFirma = new Operation(
+            'tocar',
+            'x',
+            static fn (array $i) => $i,
+            mutating: true,
             effects: new EffectProfile(
                 mutation: Mutation::Persistent,
                 externality: Externality::None,
@@ -348,7 +392,10 @@ final class CliProjectorTest extends TestCase
     /** Una operación sin esquema no tiene banderas que anunciar, y eso no es un error. */
     public function test_una_operacion_sin_esquema_proyecta_sin_banderas(): void
     {
-        $modelo = (new CliProjector())->project(new Operation('ping', 'x', static fn () => null,
+        $modelo = (new CliProjector())->project(new Operation(
+            'ping',
+            'x',
+            static fn () => null,
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,

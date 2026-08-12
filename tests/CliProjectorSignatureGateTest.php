@@ -101,7 +101,6 @@ final class CliProjectorSignatureGateTest extends TestCase
             inputSchema: null,
             mutating: true,
             requiresConfirmation: true,
-        
             effects: new EffectProfile(
                 mutation: Mutation::Persistent,
                 externality: Externality::None,
@@ -307,7 +306,6 @@ final class CliProjectorSignatureGateTest extends TestCase
             inputSchema: null,
             mutating: true,
             requiresConfirmation: false,
-        
             effects: new EffectProfile(
                 mutation: Mutation::Persistent,
                 externality: Externality::None,

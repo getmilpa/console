@@ -63,7 +63,7 @@ final class OperationScreenTest extends TestCase
             ],
             mutating: $muta,
             requiresConfirmation: $firma,
-        
+
             // The profile FOLLOWS the flag rather than guessing it: Operation refuses a probe that
             // declares mutating: true beside mutation: none, and it is right to — a consumer cannot
             // be asked which of the two lies.
@@ -180,7 +180,6 @@ final class OperationScreenTest extends TestCase
             description: 'Algo',
             handler: static fn (array $i): array => ['ok' => false, 'error' => 'no se pudo'],
             inputSchema: ['type' => 'object', 'properties' => []],
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -214,7 +213,6 @@ final class OperationScreenTest extends TestCase
                 'properties' => ['cuantos' => ['type' => 'integer']],
                 'required' => ['cuantos'],
             ],
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -242,7 +240,6 @@ final class OperationScreenTest extends TestCase
                 throw new \RuntimeException('se cayó la base');
             },
             inputSchema: ['type' => 'object', 'properties' => []],
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,

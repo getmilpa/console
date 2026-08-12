@@ -59,7 +59,6 @@ final class HttpProjectorTest extends TestCase
             mutating: true,
             requiresConfirmation: true,
             path: '/posts',
-        
             effects: new EffectProfile(
                 mutation: Mutation::Persistent,
                 externality: Externality::None,
@@ -91,7 +90,11 @@ final class HttpProjectorTest extends TestCase
 
     public function testDerivesPathFromNameWhenNotDeclared(): void
     {
-        $op = new Operation('board:seed', 'Seed', static fn (array $i): array => $i, inputSchema: ['type' => 'object'],
+        $op = new Operation(
+            'board:seed',
+            'Seed',
+            static fn (array $i): array => $i,
+            inputSchema: ['type' => 'object'],
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -154,7 +157,11 @@ final class HttpProjectorTest extends TestCase
     {
         // 'bad::name' -> explode(':', ...) -> ['bad', '', 'name'] -> an empty middle segment,
         // which the Router's grammar cannot express (would produce a `//` in the path).
-        $op = new Operation('bad::name', 'Bad', static fn (array $i): array => $i, inputSchema: ['type' => 'object'],
+        $op = new Operation(
+            'bad::name',
+            'Bad',
+            static fn (array $i): array => $i,
+            inputSchema: ['type' => 'object'],
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -175,7 +182,11 @@ final class HttpProjectorTest extends TestCase
     public function testDerivedPathContainingBraceThrowsAtRouteSynthesis(): void
     {
         // A name containing '{' would accidentally synthesize a Router placeholder segment.
-        $op = new Operation('board:{seed}', 'Seed', static fn (array $i): array => $i, inputSchema: ['type' => 'object'],
+        $op = new Operation(
+            'board:{seed}',
+            'Seed',
+            static fn (array $i): array => $i,
+            inputSchema: ['type' => 'object'],
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -224,7 +235,11 @@ final class HttpProjectorTest extends TestCase
         // claimed every operation would expose CLI-only ones over HTTP.
         $psr17 = new Psr17Factory();
         $projector = new HttpProjector([], $this->createMock(DIContainerInterface::class), $psr17, $psr17);
-        $solaHttp = new Operation('solo_http', 'Solo HTTP', static fn (array $i): array => $i, surfaces: ['http'],
+        $solaHttp = new Operation(
+            'solo_http',
+            'Solo HTTP',
+            static fn (array $i): array => $i,
+            surfaces: ['http'],
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -234,7 +249,11 @@ final class HttpProjectorTest extends TestCase
                 rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
-        $solaCli = new Operation('solo_cli', 'Solo CLI', static fn (array $i): array => $i, surfaces: ['cli'],
+        $solaCli = new Operation(
+            'solo_cli',
+            'Solo CLI',
+            static fn (array $i): array => $i,
+            surfaces: ['cli'],
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -267,7 +286,6 @@ final class HttpProjectorTest extends TestCase
             inputSchema: ['type' => 'object'],
             scopes: ['posts:write'],
             path: '/protegida',
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -300,7 +318,6 @@ final class HttpProjectorTest extends TestCase
             inputSchema: ['type' => 'object'],
             scopes: ['posts:write'],
             path: '/protegida',
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -349,7 +366,12 @@ final class HttpProjectorTest extends TestCase
             }
         };
 
-        $op = new Operation('libre', 'Libre', static fn (array $i): array => ['ok' => true], inputSchema: ['type' => 'object'], path: '/libre',
+        $op = new Operation(
+            'libre',
+            'Libre',
+            static fn (array $i): array => ['ok' => true],
+            inputSchema: ['type' => 'object'],
+            path: '/libre',
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -382,16 +404,19 @@ final class HttpProjectorTest extends TestCase
         $ctx = $metodo->invoke(
             $proyector,
             new ServerRequest('POST', '/whatever'),
-            new Operation('x', 'x', static fn (array $i): array => $i,
-            effects: new EffectProfile(
-                mutation: Mutation::None,
-                externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
-                authority: Authority::Read,
-                subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
+            new Operation(
+                'x',
+                'x',
+                static fn (array $i): array => $i,
+                effects: new EffectProfile(
+                    mutation: Mutation::None,
+                    externality: Externality::None,
+                    reversibility: Reversibility::Guaranteed,
+                    authority: Authority::Read,
+                    subject: Subject::None,
+                    rollbackContract: 'test probe: nothing leaves this process',
+                ),
             ),
-        ),
         );
 
         self::assertNull($ctx->actor, 'sin identidad no se inventa una');
@@ -428,16 +453,19 @@ final class HttpProjectorTest extends TestCase
         $ctx = $metodo->invoke(
             $proyector,
             (new ServerRequest('POST', '/whatever'))->withAttribute('milpa.auth', $auth),
-            new Operation('agent:answer', 'x', static fn (array $i): array => $i,
-            effects: new EffectProfile(
-                mutation: Mutation::None,
-                externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
-                authority: Authority::Read,
-                subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
+            new Operation(
+                'agent:answer',
+                'x',
+                static fn (array $i): array => $i,
+                effects: new EffectProfile(
+                    mutation: Mutation::None,
+                    externality: Externality::None,
+                    reversibility: Reversibility::Guaranteed,
+                    authority: Authority::Read,
+                    subject: Subject::None,
+                    rollbackContract: 'test probe: nothing leaves this process',
+                ),
             ),
-        ),
         );
 
         self::assertSame('actor:member:42', $ctx->actor);

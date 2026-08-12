@@ -107,7 +107,6 @@ final class OperationRunnerTest extends TestCase
             description: 'Algo',
             handler: static fn (array $i): array => ['ok' => true, 'eco' => $i['x'] ?? null],
             inputSchema: ['type' => 'object', 'properties' => ['x' => ['type' => 'string']]],
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -159,7 +158,6 @@ final class OperationRunnerTest extends TestCase
                 return ['ok' => true, 'de' => 'el handler'];
             },
             inputSchema: ['type' => 'object', 'properties' => []],
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -209,7 +207,6 @@ final class OperationRunnerTest extends TestCase
             },
             inputSchema: ['type' => 'object', 'properties' => []],
             mutating: true,
-        
             effects: new EffectProfile(
                 mutation: Mutation::Persistent,
                 externality: Externality::None,
@@ -255,7 +252,6 @@ final class OperationRunnerTest extends TestCase
                 throw new \RuntimeException('se cayó la base');
             },
             inputSchema: ['type' => 'object', 'properties' => []],
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -288,7 +284,6 @@ final class OperationRunnerTest extends TestCase
             description: 'Por contenedor',
             handler: [\stdClass::class, 'hazlo'],
             inputSchema: ['type' => 'object', 'properties' => []],
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
@@ -345,7 +340,6 @@ final class OperationRunnerTest extends TestCase
             handler: static fn (array $i): array => ['ok' => true],
             inputSchema: ['type' => 'object', 'properties' => []],
             path: '/ping',
-        
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,

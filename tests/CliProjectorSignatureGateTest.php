@@ -16,6 +16,12 @@ namespace Milpa\Console\Tests;
 
 use Milpa\Console\CliRunner;
 use Milpa\Console\OperationSigner;
+use Milpa\Command\Effect\Authority;
+use Milpa\Command\Effect\EffectProfile;
+use Milpa\Command\Effect\Externality;
+use Milpa\Command\Effect\Mutation;
+use Milpa\Command\Effect\Reversibility;
+use Milpa\Command\Effect\Subject;
 use Milpa\Command\Operation;
 use Milpa\Interfaces\Di\DIContainerInterface;
 use Milpa\ToolRuntime\Identity\NonceLedger;
@@ -95,6 +101,14 @@ final class CliProjectorSignatureGateTest extends TestCase
             inputSchema: null,
             mutating: true,
             requiresConfirmation: true,
+            effects: new EffectProfile(
+                mutation: Mutation::Persistent,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::Data,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
     }
 
@@ -292,6 +306,14 @@ final class CliProjectorSignatureGateTest extends TestCase
             inputSchema: null,
             mutating: true,
             requiresConfirmation: false,
+            effects: new EffectProfile(
+                mutation: Mutation::Persistent,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::Data,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
         );
 
         $this->out = [];

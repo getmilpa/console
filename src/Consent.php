@@ -55,6 +55,13 @@ final class Consent
      * never WHETHER it is needed.
      */
     /**
+     * Does this call demand a human signature before it runs?
+     *
+     * One rule for every surface, resolved for the CALL rather than for the operation in the
+     * abstract: an operation may declare that a given argument brings its ceiling down, and this is
+     * where that declaration is read. Surfaces holding no invocation pass no arguments, and there
+     * nothing comes down.
+     *
      * @param array<string, mixed> $arguments the invocation's arguments, empty on catalogue surfaces
      */
     public static function demanded(Operation $op, array $arguments = []): bool

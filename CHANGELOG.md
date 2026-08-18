@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.11.2](https://github.com/getmilpa/console/compare/v0.11.1...v0.11.2) (2026-08-18)
+
+
+### Bug Fixes
+
+* the descent battery leaves authority up, and a new case says why ([#45](https://github.com/getmilpa/console/issues/45)) ([1730f9e](https://github.com/getmilpa/console/commit/1730f9e52713b520cc358fee7f6d74e80071076b))
+
 ## [0.11.1](https://github.com/getmilpa/console/compare/v0.11.0...v0.11.1) (2026-08-18)
 
 

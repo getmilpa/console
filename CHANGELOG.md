@@ -1,6 +1,17 @@
 # Changelog
 
 
+## [0.11.0](https://github.com/getmilpa/console/compare/v0.10.2...v0.11.0) (2026-08-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* consent for a call is now decided from `Operation::ceilingForCall()`. A declared descent with no valid certificate no longer lowers the ceiling, so operations that relied on a descent to avoid asking will ask until their descent is certified. Requires milpa/command >=0.10.
+
+### Features
+
+* decide consent from the operation, so a descent's certificate is consulted ([#41](https://github.com/getmilpa/console/issues/41)) ([c42fdea](https://github.com/getmilpa/console/commit/c42fdead3d304c674fdb5cd798ce62646037f194))
+
 ## [0.9.1](https://github.com/getmilpa/console/releases/tag/v0.9.1) (2026-08-12)
 
 Documents the consent predicate. v0.9.0's docblock gate was red on main because the method grew a parameter and kept only a `@param` tag; the code and suite were green.

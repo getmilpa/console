@@ -150,18 +150,37 @@ final class ConsentDescentTest extends TestCase
         self::assertTrue(Consent::demanded($desnudo, ['dry_run' => true]));
     }
 
+    /**
+     * 7 · a descent lowering AUTHORITY does not land through this gate today — and that is the
+     * contract, not a gap: since `command v0.12.0` the axis is judged live by an AuthorityPolicy
+     * over verified facts (greenhouse decisions/0054), and this gate has neither to offer until
+     * identity lands (evidence/0207: sessions are born ownerless). Fail-closed telling the truth.
+     */
+    public function testADescentLoweringAuthorityDoesNotLandWithoutAPolicy(): void
+    {
+        $op = $this->conDescenso(bajaAuthority: true);
+
+        self::assertTrue(Consent::demanded($op, ['dry_run' => true]));
+    }
+
     private function conDescenso(
         string $porque = 'the handler returns what it would run without running it',
         bool $certificado = true,
+        bool $bajaAuthority = false,
     ): Operation {
         // The handler lives in a variable so the probe and the real operation share ONE closure:
         // the digest follows the body, and a copy on another line would be other code.
         $handler = static fn (): array => [];
+        // authority stays UP on purpose: since `command v0.12.0` that axis is judged live by an
+        // AuthorityPolicy (greenhouse decisions/0054), and this gate passes none — evidence/0207
+        // measured sessions born ownerless, so there are no verified facts to hand it. The battery
+        // still measures what it always did, because demanded() requires subject AND authority
+        // high: lowering subject is enough to stop the asking.
         $destino = new EffectProfile(
             mutation: Mutation::None,
             externality: Externality::None,
             reversibility: Reversibility::Guaranteed,
-            authority: Authority::Read,
+            authority: $bajaAuthority ? Authority::Read : Authority::Privileged,
             subject: Subject::None,
             rollbackContract: 'nothing ran, so there is nothing to undo',
         );
@@ -190,7 +209,7 @@ final class ConsentDescentTest extends TestCase
                         verifier: 'synthetic/2026-08-18',
                         operation: 'sonda',
                         predicate: ['dry_run' => true],
-                        covers: ['mutation', 'externality', 'reversibility', 'authority', 'subject'],
+                        covers: ['mutation', 'externality', 'reversibility', 'subject'],
                         to: $destino,
                         handlerSha256: $sonda->handlerDigest(),
                         verifierPublicKey: $this->publica,

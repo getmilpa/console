@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.12.0](https://github.com/getmilpa/console/compare/v0.11.2...v0.12.0) (2026-08-18)
+
+
+### Features
+
+* the gate registers the granted authorization for the run to consume ([#47](https://github.com/getmilpa/console/issues/47)) ([408441d](https://github.com/getmilpa/console/commit/408441d0313815de5a65c5a611b14e414e352365))
+
 ## [0.11.2](https://github.com/getmilpa/console/compare/v0.11.1...v0.11.2) (2026-08-18)
 
 

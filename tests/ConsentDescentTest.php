@@ -6,6 +6,7 @@ namespace Milpa\Console\Tests;
 
 use Milpa\Command\Effect\Authority;
 use Milpa\Command\Effect\Descent;
+use Milpa\Command\Effect\DescentCertificate;
 use Milpa\Command\Effect\EffectProfile;
 use Milpa\Command\Effect\Externality;
 use Milpa\Command\Effect\Mutation;
@@ -30,6 +31,13 @@ use PHPUnit\Framework\TestCase;
  *
  * The second case is the control. If the same call demands the same thing with and without the
  * argument, nothing here is measuring the descent; it is measuring something that already happened.
+ *
+ * Case 5 is what `command v0.10.0` added, landing greenhouse decisions/0050: the reason stopped
+ * being the key. A descent now lowers a ceiling only against a certificate bound to the handler that
+ * is about to run, so consent is decided from `Operation::ceilingForCall()` — the only place holding
+ * both the declared effects and the code they describe. Case 1 is its positive control and carries
+ * `F-6` of decisions/0045: a certified, honest descent must STILL lower, or the mechanism cost
+ * something and bought nothing.
  */
 final class ConsentDescentTest extends TestCase
 {
@@ -74,12 +82,39 @@ final class ConsentDescentTest extends TestCase
         self::assertTrue(Consent::demanded($this->conDescenso(porque: ''), ['dry_run' => true]));
     }
 
-    private function conDescenso(string $porque = 'the handler returns what it would run without running it'): Operation
+    /**
+     * 5 · WITHOUT A CERTIFICATE, the same declaration buys nothing — greenhouse decisions/0050.
+     *
+     * This is `F-1` of decisions/0045 read at the surface that pays for it. Before v0.10.0 a
+     * non-empty reason was the whole mechanism, and `evidence/0238` ran a handler doing exactly what
+     * its descent denied: it got the lowered ceiling AND this gate's silence.
+     */
+    public function testWithoutACertificateTheDeclarationBuysNothing(): void
     {
+        self::assertTrue(Consent::demanded($this->conDescenso(certificado: false), ['dry_run' => true]));
+    }
+
+    private function conDescenso(
+        string $porque = 'the handler returns what it would run without running it',
+        bool $certificado = true,
+    ): Operation {
+        // The handler lives in a variable so the probe and the real operation share ONE closure:
+        // the digest follows the body, and a copy on another line would be other code.
+        $handler = static fn (): array => [];
+        $destino = new EffectProfile(
+            mutation: Mutation::None,
+            externality: Externality::None,
+            reversibility: Reversibility::Guaranteed,
+            authority: Authority::Read,
+            subject: Subject::None,
+            rollbackContract: 'nothing ran, so there is nothing to undo',
+        );
+        $sonda = new Operation(name: 'sonda', description: 'the same handler, to read its digest', handler: $handler);
+
         return new Operation(
             name: 'sonda',
             description: 'a probe that declares a descent on one argument',
-            handler: static fn (): array => [],
+            handler: $handler,
             effects: new EffectProfile(
                 mutation: Mutation::Persistent,
                 externality: Externality::ThirdParty,
@@ -90,15 +125,15 @@ final class ConsentDescentTest extends TestCase
                 descents: [new Descent(
                     argument: 'dry_run',
                     whenValue: true,
-                    to: new EffectProfile(
-                        mutation: Mutation::None,
-                        externality: Externality::None,
-                        reversibility: Reversibility::Guaranteed,
-                        authority: Authority::Read,
-                        subject: Subject::None,
-                        rollbackContract: 'nothing ran, so there is nothing to undo',
-                    ),
+                    to: $destino,
                     because: $porque,
+                    certificate: $certificado ? new DescentCertificate(
+                        verifier: 'synthetic/2026-08-18',
+                        predicate: ['dry_run' => true],
+                        covers: ['mutation', 'externality', 'reversibility', 'authority', 'subject'],
+                        to: $destino,
+                        handlerSha256: $sonda->handlerDigest(),
+                    ) : null,
                 )],
             ),
         );

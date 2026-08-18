@@ -96,7 +96,12 @@ final class Consent
         // nothing to read and nothing may come down — greenhouse decisions/0029 rule 3, that a
         // descent with nothing holding it up lowers nothing. A conservative listing errs toward the
         // safe side; an optimistic one promises not to ask and then asks.
-        $techo = $op->effectCeiling()->forCall($arguments);
+        //
+        // AND SINCE `command v0.10.0` THE CEILING IS ASKED OF THE OPERATION, not of its profile.
+        // greenhouse decisions/0050 made a descent depend on a certificate bound to the handler about
+        // to run, and the operation is the only place holding both. Asking the profile alone would
+        // hand it a question it cannot answer, and it would answer honestly: no descent.
+        $techo = $op->ceilingForCall($arguments);
 
         return $techo->subject->weight() >= Subject::Executable->weight()
             && $techo->authority->weight() >= Authority::Privileged->weight();

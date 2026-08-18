@@ -28,7 +28,7 @@
     "milpa/live": ">=0.4 <1.0",
     "milpa/live-tui": ">=0.4 <1.0",
     "milpa/plugin": ">=0.7 <1.0",
-    "milpa/tool-runtime": ">=0.9 <1.0",
+    "milpa/tool-runtime": ">=0.12 <1.0",
     "psr/http-factory": "^1.0",
     "psr/http-message": "^1.1 || ^2.0"
   },

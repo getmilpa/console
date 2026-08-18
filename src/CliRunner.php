@@ -21,6 +21,8 @@ use Milpa\Console\Rendering\PlainTextCliRenderer;
 use Milpa\Interfaces\Di\DIContainerInterface;
 use Milpa\ToolRuntime\Identity\FileNonceLedger;
 use Milpa\ToolRuntime\Identity\GnupgSignatureVerifier;
+use Milpa\ToolRuntime\Identity\GrantedAuthorization;
+use Milpa\ToolRuntime\Identity\OperationAuthorization;
 use Milpa\ToolRuntime\Identity\OperationAuthorizer;
 
 /**
@@ -69,13 +71,18 @@ final class CliRunner
      * The refusal paths matter as much as the success one, so each says what happened and what to
      * do: a card that declined is not a bad signature, and a bad signature is not an expired one.
      *
+     * The container comes in because a granted verdict no longer dies at the banner: the gate
+     * registers the grant there so the handler about to run can consume it (greenhouse
+     * decisions/0056). Refusals register nothing — the container after a refusal looks exactly as
+     * it did before the gate.
+     *
      * @param array<string, mixed>   $input
      * @param list<string>           $argv
      * @param callable(string): void $out
      *
      * @return int 0 when authorized, otherwise the exit code to return
      */
-    private function authorizeBySignature(Operation $op, array $input, array $argv, callable $out): int
+    private function authorizeBySignature(Operation $op, array $input, array $argv, DIContainerInterface $container, callable $out): int
     {
         if (!\in_array('--sign', $argv, true)) {
             $out("This operation mutates and needs your authorization. Re-run with --sign.");
@@ -117,6 +124,20 @@ final class CliRunner
         // Printed, not just recorded: the operator sees which key answered before the effect
         // happens, so a wrong card is caught by the person rather than by an audit weeks later.
         $out('✓ authorized by ' . ($verdict->signer?->principal() ?? 'unknown'));
+
+        // And carried, not just printed: the verdict used to end at that banner, which left a
+        // handler wanting to persist the grant as an assertion (greenhouse decisions/0056) with
+        // nothing but its own retelling. The RAW payload and signature travel with it because the
+        // receipt doctrine (greenhouse evidence/0254) requires a consumer to RE-VERIFY, and a
+        // paraphrase cannot be re-verified. The guards are for the types, not for doubt: a granted
+        // verdict always carries its signer, and a payload the authorizer just accepted parses.
+        $authorization = OperationAuthorization::fromCanonical($payload);
+        if ($authorization !== null && $verdict->signer !== null) {
+            $container->registerService(
+                GrantedAuthorization::class,
+                new GrantedAuthorization($authorization, $verdict->signer, $payload, $signature),
+            );
+        }
 
         return 0;
     }
@@ -170,7 +191,7 @@ final class CliRunner
             // `--yes` could be answered before knowing what the arguments were, because it never
             // referred to them. A signature is over the arguments, so there is nothing to sign
             // until they exist.
-            $authorized = $this->authorizeBySignature($op, $input, $argv, $out);
+            $authorized = $this->authorizeBySignature($op, $input, $argv, $container, $out);
             if ($authorized !== 0) {
                 return $authorized;
             }

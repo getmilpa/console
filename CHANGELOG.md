@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.11.1](https://github.com/getmilpa/console/compare/v0.11.0...v0.11.1) (2026-08-18)
+
+
+### Bug Fixes
+
+* certificates in this battery name themselves and carry a signature ([#43](https://github.com/getmilpa/console/issues/43)) ([afbb626](https://github.com/getmilpa/console/commit/afbb626a86457f388dcb85bc720eab9836f8bb16))
+
 ## [0.11.0](https://github.com/getmilpa/console/compare/v0.10.2...v0.11.0) (2026-08-18)
 
 

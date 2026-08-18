@@ -38,9 +38,24 @@ use PHPUnit\Framework\TestCase;
  * both the declared effects and the code they describe. Case 1 is its positive control and carries
  * `F-6` of decisions/0045: a certified, honest descent must STILL lower, or the mechanism cost
  * something and bought nothing.
+ *
+ * Case 6 is what `command v0.11.0` added: the payload must also say where it came from. An unsigned
+ * certificate is not a certificate with an open question — `evidence/0249` deleted the artifact,
+ * rewrote it with a text editor, and the ceiling came down.
  */
 final class ConsentDescentTest extends TestCase
 {
+    private string $publica = '';
+
+    private string $privada = '';
+
+    protected function setUp(): void
+    {
+        $par = sodium_crypto_sign_keypair();
+        $this->publica = base64_encode(sodium_crypto_sign_publickey($par));
+        $this->privada = sodium_crypto_sign_secretkey($par);
+    }
+
     /** 1 · with the argument, the declared descent lands and the operation runs on its own. */
     public function testTheArgumentBringsTheCeilingDown(): void
     {
@@ -94,6 +109,47 @@ final class ConsentDescentTest extends TestCase
         self::assertTrue(Consent::demanded($this->conDescenso(certificado: false), ['dry_run' => true]));
     }
 
+    /** 6 · a certificate nobody signed buys nothing here either — greenhouse decisions/0051. */
+    public function testAnUnsignedCertificateBuysNothing(): void
+    {
+        $op = $this->conDescenso();
+        $descenso = $op->effects->descents[0];
+        $sinFirma = new DescentCertificate(
+            verifier: $descenso->certificate->verifier,
+            operation: $descenso->certificate->operation,
+            predicate: $descenso->certificate->predicate,
+            covers: $descenso->certificate->covers,
+            to: $descenso->certificate->to,
+            handlerSha256: $descenso->certificate->handlerSha256,
+            verifierPublicKey: $this->publica,
+        );
+
+        $desnudo = new Operation(
+            name: $op->name,
+            description: $op->description,
+            handler: $op->handler,
+            inputSchema: $op->inputSchema,
+            mutating: $op->mutating,
+            effects: new EffectProfile(
+                mutation: Mutation::Persistent,
+                externality: Externality::ThirdParty,
+                reversibility: Reversibility::Compensatable,
+                authority: Authority::Privileged,
+                subject: Subject::Executable,
+                rollbackContract: 'synthetic probe',
+                descents: [new Descent(
+                    argument: 'dry_run',
+                    whenValue: true,
+                    to: $descenso->to,
+                    because: $descenso->because,
+                    certificate: $sinFirma,
+                )],
+            ),
+        );
+
+        self::assertTrue(Consent::demanded($desnudo, ['dry_run' => true]));
+    }
+
     private function conDescenso(
         string $porque = 'the handler returns what it would run without running it',
         bool $certificado = true,
@@ -127,13 +183,18 @@ final class ConsentDescentTest extends TestCase
                     whenValue: true,
                     to: $destino,
                     because: $porque,
-                    certificate: $certificado ? new DescentCertificate(
+                    // Named, and signed by the verifier this test recognises — `command v0.11.0`
+                    // stopped believing a payload that cannot say where it came from
+                    // (greenhouse decisions/0051, priced in evidence/0249).
+                    certificate: $certificado ? (new DescentCertificate(
                         verifier: 'synthetic/2026-08-18',
+                        operation: 'sonda',
                         predicate: ['dry_run' => true],
                         covers: ['mutation', 'externality', 'reversibility', 'authority', 'subject'],
                         to: $destino,
                         handlerSha256: $sonda->handlerDigest(),
-                    ) : null,
+                        verifierPublicKey: $this->publica,
+                    ))->signedWith($this->privada) : null,
                 )],
             ),
         );

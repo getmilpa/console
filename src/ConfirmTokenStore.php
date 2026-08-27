@@ -30,7 +30,7 @@ namespace Milpa\Console;
  * production, back it with a store that outlives a single process — a session, a shared cache
  * (e.g. Redis/Memcached), or a database table with the same one-time-use-plus-TTL semantics.
  */
-final class ConfirmTokenStore
+final class ConfirmTokenStore implements ConfirmTokens
 {
     /** @var array<string, array{operation: string, expires: int}> */
     private array $tokens = [];

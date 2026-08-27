@@ -19,6 +19,7 @@ use Milpa\Command\InvocationContext;
 use Milpa\Command\Operation;
 use Milpa\Command\OperationHttpPolicy;
 use Milpa\Command\SurfaceProjector;
+use Milpa\Console\ConfirmTokens;
 use Milpa\Console\ConfirmTokenStore;
 use Milpa\Console\Consent;
 use Milpa\Console\OperationRunner;
@@ -88,7 +89,7 @@ final class HttpProjector implements SurfaceProjector
         private readonly ResponseFactoryInterface $responses,
         private readonly StreamFactoryInterface $streams,
         private readonly SchemaCoercer $coercer = new SchemaCoercer(),
-        private readonly ConfirmTokenStore $tokens = new ConfirmTokenStore(),
+        private readonly ConfirmTokens $tokens = new ConfirmTokenStore(),
         // La política se inyecta y ya no se hereda: es el eje `Intent -> Policy -> Signer`, y tenerla
         // como colaborador es lo que permite verla, sustituirla y probarla sola.
         private readonly ?OperationHttpPolicy $policy = null,

@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Milpa\Console\Events;
 
+use Milpa\Command\InvocationContext;
 use Milpa\Command\Operation;
 
 /**
@@ -45,6 +46,9 @@ final readonly class OperationExecutedEvent
         public bool $shortCircuited = false,
         public bool $stopped = false,
         public ?\Throwable $error = null,
+        // The invocation context — actor (who authorized), verified, executor (who ran it), and the
+        // authorizationId — so an auditor can attribute an execution, not just observe that it happened.
+        public ?InvocationContext $context = null,
     ) {
     }
 

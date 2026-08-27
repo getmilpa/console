@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.14.0](https://github.com/getmilpa/console/compare/v0.13.0...v0.14.0) (2026-08-27)
+
+
+### Features
+
+* **events:** OperationExecutedEvent carries the InvocationContext so an execution can be attributed ([#51](https://github.com/getmilpa/console/issues/51)) ([110aab7](https://github.com/getmilpa/console/commit/110aab7126fd06b990f6d2899fd87823bca43c06))
+
 ## [0.13.0](https://github.com/getmilpa/console/compare/v0.12.0...v0.13.0) (2026-08-27)
 
 

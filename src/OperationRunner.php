@@ -86,7 +86,7 @@ final readonly class OperationRunner
             // resultado servido de caché que no aparece en la bitácora es un hueco que sólo se nota
             // cuando alguien pregunta por qué no aparece.
             $resultado = $slot->getResult();
-            $this->emitExecuted($operation, $input, $surface, $resultado, shortCircuited: true);
+            $this->emitExecuted($operation, $input, $surface, $resultado, shortCircuited: true, context: $context);
 
             return $resultado;
         }
@@ -94,7 +94,7 @@ final readonly class OperationRunner
         if ($slot->isStopped()) {
             // Detenida: NO es lo mismo que cortocircuitada. Nadie contestó por ella; alguien decidió
             // que no corriera, y quien llamó tiene que poder distinguirlo de un resultado.
-            $this->emitExecuted($operation, $input, $surface, null, stopped: true);
+            $this->emitExecuted($operation, $input, $surface, null, stopped: true, context: $context);
 
             throw new OperationStoppedException(
                 "La operación «{$operation->name}» fue detenida por un listener de `operation.executing`.",
@@ -106,12 +106,12 @@ final readonly class OperationRunner
         } catch (\Throwable $e) {
             // Se audita el fracaso ANTES de propagarlo: un error que no deja rastro es el que nadie
             // encuentra al día siguiente.
-            $this->emitExecuted($operation, $input, $surface, null, error: $e);
+            $this->emitExecuted($operation, $input, $surface, null, error: $e, context: $context);
 
             throw $e;
         }
 
-        $this->emitExecuted($operation, $input, $surface, $resultado);
+        $this->emitExecuted($operation, $input, $surface, $resultado, context: $context);
 
         return $resultado;
     }
@@ -178,6 +178,7 @@ final readonly class OperationRunner
         bool $shortCircuited = false,
         bool $stopped = false,
         ?\Throwable $error = null,
+        ?InvocationContext $context = null,
     ): void {
         $this->dispatcher?->dispatch('operation.executed', [
             'event' => new OperationExecutedEvent(
@@ -188,6 +189,7 @@ final readonly class OperationRunner
                 shortCircuited: $shortCircuited,
                 stopped: $stopped,
                 error: $error,
+                context: $context,
             ),
         ]);
     }

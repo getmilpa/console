@@ -16,6 +16,7 @@ namespace Milpa\Console\Tests;
 
 use Milpa\Console\CliProjector;
 use Milpa\Console\CliRunner;
+use Milpa\Console\OperationSigner;
 use Milpa\Command\Effect\Authority;
 use Milpa\Command\Effect\EffectProfile;
 use Milpa\Command\Effect\Externality;
@@ -100,6 +101,106 @@ final class CliProjectorTest extends TestCase
 
         self::assertSame(0, $code);
         self::assertSame(['got:', '  n: 42'], $lines);
+    }
+
+    public function testRunReportsAnUnknownFieldAgainstAClosedSchema(): void
+    {
+        $lines = [];
+        $ran = false;
+        $op = new Operation(
+            'create_post',
+            'Create',
+            static function (array $i) use (&$ran): array {
+                $ran = true;
+
+                return $i;
+            },
+            inputSchema: [
+                'type' => 'object',
+                'properties' => ['title' => ['type' => 'string']],
+                'additionalProperties' => false,
+            ],
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::None,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
+
+        $code = $this->projector->run(
+            $op,
+            ['--title=Hi', '--admin=1'],
+            $this->container,
+            static function (string $line) use (&$lines): void {
+                $lines[] = $line;
+            },
+        );
+
+        self::assertSame(1, $code);
+        self::assertFalse($ran);
+        self::assertStringContainsString('admin', implode("\n", $lines));
+    }
+
+    public function testSignControlFlagDoesNotViolateAClosedInputSchema(): void
+    {
+        $signer = new class () implements OperationSigner {
+            public bool $called = false;
+            /** @var array<string, mixed> */
+            public array $arguments = [];
+
+            public function sign(string $operation, array $arguments, string $host, int $now): ?array
+            {
+                $this->called = true;
+                $this->arguments = $arguments;
+
+                return null;
+            }
+        };
+        $lines = [];
+        $ran = false;
+        $op = new Operation(
+            'create_post',
+            'Create',
+            static function (array $i) use (&$ran): array {
+                $ran = true;
+
+                return $i;
+            },
+            inputSchema: [
+                'type' => 'object',
+                'properties' => ['title' => ['type' => 'string']],
+                'additionalProperties' => false,
+            ],
+            mutating: true,
+            requiresConfirmation: true,
+            effects: new EffectProfile(
+                mutation: Mutation::Persistent,
+                externality: Externality::None,
+                reversibility: Reversibility::Guaranteed,
+                authority: Authority::Read,
+                subject: Subject::Data,
+                rollbackContract: 'test probe: nothing leaves this process',
+            ),
+        );
+        $runner = new CliRunner(signer: $signer);
+
+        $code = $runner->run(
+            $op,
+            ['--title=Hi', '--sign'],
+            $this->container,
+            static function (string $line) use (&$lines): void {
+                $lines[] = $line;
+            },
+        );
+
+        self::assertSame(1, $code);
+        self::assertTrue($signer->called, 'the surface control must reach the signature gate');
+        self::assertSame(['title' => 'Hi'], $signer->arguments);
+        self::assertFalse($ran);
+        self::assertStringContainsString('Nothing was signed', implode("\n", $lines));
     }
 
     /**

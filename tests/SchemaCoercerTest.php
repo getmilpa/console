@@ -56,6 +56,35 @@ final class SchemaCoercerTest extends TestCase
         self::assertSame(['status' => 'draft'], $out);
     }
 
+    public function testExplicitlyAllowedAdditionalPropertiesRemainIgnored(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'properties' => ['status' => ['type' => 'string', 'default' => 'draft']],
+            'additionalProperties' => true,
+        ];
+
+        $out = $this->coercer->coerce($schema, ['yes' => '1']);
+
+        self::assertSame(['status' => 'draft'], $out);
+    }
+
+    public function testRejectsEachUnknownRawKeyWhenAdditionalPropertiesAreForbidden(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'properties' => ['title' => ['type' => 'string']],
+            'additionalProperties' => false,
+        ];
+
+        try {
+            $this->coercer->coerce($schema, ['title' => 'Hi', 'admin' => '1', 'role' => 'owner']);
+            self::fail('expected SchemaCoercionException');
+        } catch (SchemaCoercionException $e) {
+            self::assertSame(["unknown field 'admin'", "unknown field 'role'"], $e->errors);
+        }
+    }
+
     public function testThrowsOnMissingRequired(): void
     {
         $schema = ['type' => 'object', 'properties' => ['title' => ['type' => 'string']], 'required' => ['title']];

@@ -55,7 +55,7 @@ final class HttpProjectorTest extends TestCase
             inputSchema: ['type' => 'object', 'properties' => [
                 'title' => ['type' => 'string'],
                 'body' => ['type' => 'string'],
-            ], 'required' => ['title', 'body']],
+            ], 'required' => ['title', 'body'], 'additionalProperties' => false],
             mutating: true,
             requiresConfirmation: true,
             path: '/posts',
@@ -151,6 +151,24 @@ final class HttpProjectorTest extends TestCase
 
         self::assertSame(422, $response->getStatusCode());
         self::assertStringContainsString('body', (string) $response->getBody());
+    }
+
+    public function testUnknownFieldAgainstClosedSchemaReturns422AndNamesField(): void
+    {
+        $projector = $this->projector($this->createPostOperation());
+        $body = '{"title":"Hi","body":"Yo","admin":true}';
+        $confirmed = $this->matched($projector, 'POST', '/posts', $body)
+            ->withHeader('Confirm-Token', json_decode((string) $projector->handle(
+                $this->matched($projector, 'POST', '/posts', $body)
+            )->getBody(), true)['confirm_token']);
+
+        $response = $projector->handle($confirmed);
+
+        self::assertSame(422, $response->getStatusCode());
+        self::assertSame(
+            ['errors' => ["unknown field 'admin'"]],
+            json_decode((string) $response->getBody(), true),
+        );
     }
 
     public function testDerivedPathWithEmptySegmentThrowsAtRouteSynthesis(): void

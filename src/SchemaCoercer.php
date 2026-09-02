@@ -46,6 +46,14 @@ final class SchemaCoercer
         $out = [];
         $errors = [];
 
+        if (($inputSchema['additionalProperties'] ?? null) === false) {
+            foreach ($raw as $name => $_value) {
+                if (!\array_key_exists($name, $properties)) {
+                    $errors[] = "unknown field '{$name}'";
+                }
+            }
+        }
+
         foreach ($properties as $name => $spec) {
             $type = \is_string($spec['type'] ?? null) ? $spec['type'] : 'string';
 

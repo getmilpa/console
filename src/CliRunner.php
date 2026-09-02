@@ -156,7 +156,11 @@ final class CliRunner
      */
     public function deriveInput(Operation $op, array $argv): array
     {
-        return $this->coercer->coerce($op->inputSchema ?? [], $this->rawBag($argv, $op->inputSchema ?? []));
+        // `--sign` controls this surface; it is not input for the operation. The original argv stays
+        // intact for the signature gate, while the schema sees only the arguments it declares.
+        $inputArgv = array_values(array_filter($argv, static fn (string $token): bool => $token !== '--sign'));
+
+        return $this->coercer->coerce($op->inputSchema ?? [], $this->rawBag($inputArgv, $op->inputSchema ?? []));
     }
 
     /**

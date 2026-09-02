@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.14.1](https://github.com/getmilpa/console/compare/v0.14.0...v0.14.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* reject undeclared input in closed schemas ([#53](https://github.com/getmilpa/console/issues/53)) ([bc85b35](https://github.com/getmilpa/console/commit/bc85b35ce6b7a3898a7d68592a2d6eff5393fca6))
+
 ## [0.14.0](https://github.com/getmilpa/console/compare/v0.13.0...v0.14.0) (2026-08-27)
 
 

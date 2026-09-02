@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Milpa\Console;
 
+use Milpa\Command\Consent\ConsentGrant;
 use Milpa\Command\Effect\Authority;
 use Milpa\Command\Effect\Subject;
 use Milpa\Command\Operation;
@@ -105,5 +106,49 @@ final class Consent
 
         return $techo->subject->weight() >= Subject::Executable->weight()
             && $techo->authority->weight() >= Authority::Privileged->weight();
+    }
+
+    /**
+     * ¿Está SATISFECHA la demanda de esta llamada por una autoridad ya en mano? (0187 D-01)
+     *
+     * `demanded()` dice, surface-agnóstico, SI hace falta que alguien autorice. Satisfacerla, en
+     * cambio, se había vuelto surface-específico: el CLI la limpia con una firma gpg, la sesión con
+     * un grant de `perm:` — dos mecanismos disjuntos de una misma demanda. Un sí humano verificado,
+     * grabado por un canal que no firma por CLI, no limpiaba una demanda de firma aunque FUERA la
+     * autoridad que la operación pedía. «Una autoridad, muchas proyecciones» quedaba roto: la
+     * autoridad del humano es una, pero sólo se aceptaba la proyección-firma del CLI.
+     *
+     * Este predicado la cierra: una demanda está satisfecha cuando NO hay demanda, o cuando algún
+     * grant en mano {@see ConsentGrant::admits()} la llamada EXACTA — es decir, la cubre Y trae una
+     * prueba viva. La firma gpg es UNA prueba así (acuñable como IntentGrant desde su
+     * `GrantedAuthorization`); la respuesta humana verificada de un canal de grabación es otra. Un
+     * grant sin prueba —el sí de sesión ordinario, o una intención de MODELO no verificada— cubre
+     * pero NO admite, así que jamás compra una demanda de firma: la falla-cerrada se conserva.
+     *
+     * La sesión es REQUERIDA, sin default: una autoridad que limpia un privilegio no puede caer
+     * abierta porque quien llama olvidó enhebrarla. `null` es una respuesta válida —«sin sesión»— y
+     * entonces ningún grant proof-backed admite ({@see ConsentGrant::admits()} exige sesión exacta),
+     * pero es una respuesta que el llamador da a propósito, no un default que se le escapa.
+     *
+     * @param array<string, mixed>   $arguments los argumentos de ESTA invocación
+     * @param iterable<ConsentGrant> $grants    los sí ya en mano esta sesión
+     */
+    public static function satisfiedBy(
+        Operation $op,
+        array $arguments,
+        iterable $grants,
+        ?string $session,
+    ): bool {
+        if (! self::demanded($op, $arguments)) {
+            return true;
+        }
+
+        foreach ($grants as $grant) {
+            if ($grant->admits($op->name, $arguments, $session)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

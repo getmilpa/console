@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.15.0](https://github.com/getmilpa/console/compare/v0.14.1...v0.15.0) (2026-09-02)
+
+
+### Features
+
+* satisfy a consent demand by any covering proof-backed grant (satisfiedBy) ([#55](https://github.com/getmilpa/console/issues/55)) ([f986aa2](https://github.com/getmilpa/console/commit/f986aa27a43b1a8d8416dd21da21853e5df2d423))
+
 ## [0.14.1](https://github.com/getmilpa/console/compare/v0.14.0...v0.14.1) (2026-09-02)
 
 

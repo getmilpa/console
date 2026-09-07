@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.16.0](https://github.com/getmilpa/console/compare/v0.15.0...v0.16.0) (2026-09-07)
+
+
+### Features
+
+* **tui:** the terminal dashboard says its words in English, and the host can replace them ([#57](https://github.com/getmilpa/console/issues/57)) ([36768ee](https://github.com/getmilpa/console/commit/36768eec35f324c11dd47b3855ae88b46fd087b2))
+
 ## [0.15.0](https://github.com/getmilpa/console/compare/v0.14.1...v0.15.0) (2026-09-02)
 
 

@@ -20,6 +20,7 @@ use Milpa\Console\State\InspectableSections;
 use Milpa\Console\State\SectionStateProvider;
 use Milpa\Console\State\SectionStateSource;
 use Milpa\Console\Tui\ConsoleScreen;
+use Milpa\Console\Tui\ScreenLabels;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -35,7 +36,7 @@ use PHPUnit\Framework\TestCase;
 final class ConsoleScreenTest extends TestCase
 {
     /** @param array<string, array<string, mixed>> $estados */
-    private function pantalla(array $estados, ?string $inicial = null): ConsoleScreen
+    private function pantalla(array $estados, ?string $inicial = null, ?ScreenLabels $labels = null): ConsoleScreen
     {
         $plugin = new class ($estados) implements SectionProvider, SectionStateSource {
             /** @param array<string, array<string, mixed>> $estados */
@@ -80,7 +81,7 @@ final class ConsoleScreenTest extends TestCase
 
         };
 
-        return new ConsoleScreen(new InspectableSections([$plugin]), 80, 24, false, $inicial);
+        return new ConsoleScreen(new InspectableSections([$plugin]), 80, 24, false, $inicial, $labels);
     }
 
     public function test_abre_en_la_primera_seccion_cuando_no_se_pide_otra(): void
@@ -226,5 +227,40 @@ final class ConsoleScreenTest extends TestCase
 
         self::assertSame('', $p->currentSectionId());
         self::assertNotSame('', $p->render());
+    }
+
+    /**
+     * The words are English by default.
+     *
+     * They used to be Spanish, hardcoded, in a framework that is English-first for adoptability — and the
+     * class docblock said the words were the host's while the code kept them.
+     */
+    public function testTheWordsAreEnglishByDefault(): void
+    {
+        $painted = $this->pantalla(['system' => ['siteName' => 'Milpa']])->render();
+
+        self::assertStringContainsString('Field', $painted);
+        self::assertStringContainsString('Value', $painted);
+        self::assertStringContainsString('q quit', $painted);
+        self::assertStringNotContainsString('Campo', $painted);
+        self::assertStringNotContainsString('q salir', $painted);
+    }
+
+    /** A host with a language passes its own, and the same screen answers in it. */
+    public function testAHostWithALanguageReplacesEveryWord(): void
+    {
+        $labels = new ScreenLabels(field: 'Campo', value: 'Valor', empty: 'Nada.', keys: 'q salir', brand: 'milpa');
+        $painted = $this->pantalla(['system' => ['siteName' => 'Milpa']], labels: $labels)->render();
+
+        self::assertStringContainsString('Campo', $painted);
+        self::assertStringContainsString('q salir', $painted);
+        self::assertStringNotContainsString('Field', $painted);
+    }
+
+    /** With nothing to inspect the screen says so — in the host's words too. */
+    public function testTheEmptyStateIsAWordLikeAnyOther(): void
+    {
+        self::assertStringContainsString('No section exposes inspectable state.', $this->pantalla([])->render());
+        self::assertStringContainsString('Nada.', $this->pantalla([], labels: new ScreenLabels(empty: 'Nada.'))->render());
     }
 }

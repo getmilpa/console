@@ -37,14 +37,18 @@ use Milpa\Console\State\InspectableSections;
  * las flechas como sinónimo de Tab— y las palabras de la barra de estado, que
  * son suyas porque tiene un idioma (ADR-0027).
  *
- * Vive aparte de {@see \Milpa\Admin\Commands\TuiCommand} para
- * que la navegación se pueda probar sin una terminal: acá no hay `stty`, no hay
- * `stream_isatty` y no se escribe una sola secuencia a mano. Esa compuerta es un
- * hecho del DESTINO y vive en el comando (ADR-0025).
+ * It lives apart from whatever COMMAND opens it — `coa tui` in `milpa/app-runtime` — so navigation can
+ * be tested without a terminal: there is no `stty` here, no `stream_isatty`, and not one escape sequence
+ * written by hand. That gate is a fact of the DESTINATION and belongs to the command (ADR-0025).
+ *
+ * The WORDS are not this class's either ({@see ScreenLabels}): it decides structure, never words.
  */
 final class ConsoleScreen
 {
     private readonly RetainedTuiLoop $loop;
+
+    /** The words this screen shows — the host's when it has a language, English otherwise. */
+    private readonly ScreenLabels $labels;
 
     public function __construct(
         private readonly InspectableSections $sections,
@@ -52,7 +56,9 @@ final class ConsoleScreen
         int $height = 24,
         bool $ansi = true,
         ?string $initialSection = null,
+        ?ScreenLabels $labels = null,
     ) {
+        $this->labels = $labels ?? new ScreenLabels();
         $ids = $this->sections->ids();
         $first = $initialSection !== null && \in_array($initialSection, $ids, true)
             ? $initialSection
@@ -151,14 +157,14 @@ final class ConsoleScreen
 
         if ($current === null) {
             return new TuiNode('root', 'box', children: [
-                new TuiNode('vacio', 'text', props: ['text' => 'Ninguna sección expone estado inspectable.']),
+                new TuiNode('vacio', 'text', props: ['text' => $this->labels->empty]),
                 $this->statusBar('—'),
             ]);
         }
 
         // El estado se pide en CADA frame, no una vez al arrancar: un dashboard
         // que congela lo que leyó al abrirse es una captura de pantalla.
-        $section = (new StateToNode('Campo', 'Valor'))->map($current['id'], $current['provider']->state());
+        $section = (new StateToNode($this->labels->field, $this->labels->value))->map($current['id'], $current['provider']->state());
 
         return new TuiNode('root', 'box', children: [
             ...$section->children,
@@ -185,8 +191,8 @@ final class ConsoleScreen
 
         return new TuiNode('status', 'status-bar', props: [
             'height' => 1,
-            'left' => 'milpa · ' . $title,
-            'right' => ($etiquetas === [] ? '' : implode('  ', $etiquetas) . '  ·  ') . 'tab · nº · q salir',
+            'left' => $this->labels->brand . ' · ' . $title,
+            'right' => ($etiquetas === [] ? '' : implode('  ', $etiquetas) . '  ·  ') . $this->labels->keys,
         ]);
     }
 

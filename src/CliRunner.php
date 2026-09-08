@@ -85,7 +85,15 @@ final class CliRunner
     private function authorizeBySignature(Operation $op, array $input, array $argv, DIContainerInterface $container, callable $out): int
     {
         if (!\in_array('--sign', $argv, true)) {
-            $out("This operation mutates and needs your authorization. Re-run with --sign.");
+            // SAY THE FACT THE GATE READ, not one the operation may never have declared: a read with no
+            // EffectProfile carries Unknown on every axis (GOV-05, greenhouse decisions/0227) and is demanded
+            // for THAT — telling its author it «mutates» sends them to fix the wrong thing.
+            $why = $op->mutating
+                ? 'mutates'
+                : ($op->effects === null
+                    ? 'never declared its effects (unclassified counts as the maximum)'
+                    : 'demands consent');
+            $out("This operation {$why} and needs your authorization. Re-run with --sign.");
             $out('');
             $out('  --sign signs THIS call — the operation, these arguments, this host — with your');
             $out('  key. The authorization cannot be presented for a different target, which is');

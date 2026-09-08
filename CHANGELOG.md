@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.18.0](https://github.com/getmilpa/console/compare/v0.17.0...v0.18.0) (2026-09-08)
+
+
+### Features
+
+* name the events holder in the manifest so a host reads it without constructing an emitter ([#63](https://github.com/getmilpa/console/issues/63)) ([fb6c222](https://github.com/getmilpa/console/commit/fb6c222297810740d97d25f48e895309342a1b00))
+
 ## [0.17.0](https://github.com/getmilpa/console/compare/v0.16.1...v0.17.0) (2026-09-08)
 
 

@@ -16,9 +16,11 @@ namespace Milpa\Console;
 
 use Milpa\Command\InvocationContext;
 use Milpa\Command\Operation;
+use Milpa\Console\Events\ConsoleEvents;
 use Milpa\Console\Events\OperationExecutedEvent;
 use Milpa\Console\Events\OperationExecutingEvent;
 use Milpa\Events\InterceptionSlot;
+use Milpa\Interfaces\Event\DeclaredEvents;
 use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Psr\Container\ContainerInterface;
 
@@ -58,6 +60,12 @@ final readonly class OperationRunner
         private ContainerInterface $container,
         private ?MilpaEventDispatcherInterface $dispatcher = null,
     ) {
+        // The emitter declares what it dispatches at the site where it receives the dispatcher, built
+        // from the same constants the dispatch() calls below use. A dispatcher that does not count
+        // declarations is asked nothing (greenhouse decisions/0228).
+        if ($dispatcher instanceof DeclaredEvents) {
+            $dispatcher->declare(...ConsoleEvents::declarations());
+        }
     }
 
     /**
@@ -77,7 +85,7 @@ final readonly class OperationRunner
     ): mixed {
         $slot = new InterceptionSlot();
         $this->dispatcher?->dispatch(
-            'operation.executing',
+            ConsoleEvents::EXECUTING,
             ['event' => new OperationExecutingEvent($operation, $input, $surface), 'slot' => $slot],
         );
 
@@ -180,7 +188,7 @@ final readonly class OperationRunner
         ?\Throwable $error = null,
         ?InvocationContext $context = null,
     ): void {
-        $this->dispatcher?->dispatch('operation.executed', [
+        $this->dispatcher?->dispatch(ConsoleEvents::EXECUTED, [
             'event' => new OperationExecutedEvent(
                 $operation,
                 $input,

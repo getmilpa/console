@@ -107,7 +107,7 @@ final class CliProjectorSignatureGateTest extends TestCase
                 reversibility: Reversibility::Guaranteed,
                 authority: Authority::Read,
                 subject: Subject::Data,
-                rollbackContract: 'test probe: nothing leaves this process',
+                rollbackContract: 'probe:undo',
             ),
         );
     }
@@ -312,7 +312,7 @@ final class CliProjectorSignatureGateTest extends TestCase
                 reversibility: Reversibility::Guaranteed,
                 authority: Authority::Read,
                 subject: Subject::Data,
-                rollbackContract: 'test probe: nothing leaves this process',
+                rollbackContract: 'probe:undo',
             ),
         );
 

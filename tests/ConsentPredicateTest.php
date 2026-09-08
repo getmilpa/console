@@ -118,10 +118,12 @@ final class ConsentPredicateTest extends TestCase
             effects: new EffectProfile(
                 mutation: $mutating ? Mutation::Persistent : Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                // The reversibility follows the flag too (milpa/command >= 0.25): a read declares
+                // NotApplicable, a mutation that promises an undo names the operation that undoes it.
+                reversibility: $mutating ? Reversibility::Guaranteed : Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: $mutating ? Subject::Data : Subject::None,
-                rollbackContract: 'synthetic probe: nothing is written',
+                rollbackContract: $mutating ? 'probe:undo' : null,
             ),
         );
     }

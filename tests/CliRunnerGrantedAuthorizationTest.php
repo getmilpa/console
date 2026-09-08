@@ -158,7 +158,7 @@ final class CliRunnerGrantedAuthorizationTest extends TestCase
                 reversibility: Reversibility::Guaranteed,
                 authority: Authority::Read,
                 subject: Subject::Data,
-                rollbackContract: 'test probe: nothing leaves this process',
+                rollbackContract: 'probe:undo',
             ),
         );
     }

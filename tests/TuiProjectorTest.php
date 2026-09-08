@@ -56,7 +56,7 @@ final class TuiProjectorTest extends TestCase
                 reversibility: Reversibility::Guaranteed,
                 authority: Authority::Read,
                 subject: Subject::Data,
-                rollbackContract: 'test probe: nothing leaves this process',
+                rollbackContract: 'probe:undo',
             ),
         );
     }
@@ -73,10 +73,9 @@ final class TuiProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         )));
         self::assertFalse($p->supports(new Operation(
@@ -87,10 +86,9 @@ final class TuiProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         )));
     }
@@ -150,10 +148,9 @@ final class TuiProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 

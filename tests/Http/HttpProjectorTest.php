@@ -65,7 +65,7 @@ final class HttpProjectorTest extends TestCase
                 reversibility: Reversibility::Guaranteed,
                 authority: Authority::Read,
                 subject: Subject::Data,
-                rollbackContract: 'test probe: nothing leaves this process',
+                rollbackContract: 'probe:undo',
             ),
         );
     }
@@ -98,10 +98,9 @@ final class HttpProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
         $routes = $this->projector($op)->routes();
@@ -183,10 +182,9 @@ final class HttpProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
         $projector = $this->projector($op);
@@ -208,10 +206,9 @@ final class HttpProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
         $projector = $this->projector($op);
@@ -261,10 +258,9 @@ final class HttpProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
         $solaCli = new Operation(
@@ -275,10 +271,9 @@ final class HttpProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -307,10 +302,9 @@ final class HttpProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
         $projector = $this->projector($op);
@@ -339,10 +333,9 @@ final class HttpProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -393,10 +386,9 @@ final class HttpProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
         $psr17 = new Psr17Factory();
@@ -429,10 +421,9 @@ final class HttpProjectorTest extends TestCase
                 effects: new EffectProfile(
                     mutation: Mutation::None,
                     externality: Externality::None,
-                    reversibility: Reversibility::Guaranteed,
+                    reversibility: Reversibility::NotApplicable,
                     authority: Authority::Read,
                     subject: Subject::None,
-                    rollbackContract: 'test probe: nothing leaves this process',
                 ),
             ),
         );
@@ -478,10 +469,9 @@ final class HttpProjectorTest extends TestCase
                 effects: new EffectProfile(
                     mutation: Mutation::None,
                     externality: Externality::None,
-                    reversibility: Reversibility::Guaranteed,
+                    reversibility: Reversibility::NotApplicable,
                     authority: Authority::Read,
                     subject: Subject::None,
-                    rollbackContract: 'test probe: nothing leaves this process',
                 ),
             ),
         );

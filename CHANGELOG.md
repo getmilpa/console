@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.16.1](https://github.com/getmilpa/console/compare/v0.16.0...v0.16.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* the --sign message says the fact the gate read ([#59](https://github.com/getmilpa/console/issues/59)) ([ed22b72](https://github.com/getmilpa/console/commit/ed22b72d228848810c4a7d18f17e3d4cb4da2981))
+
 ## [0.16.0](https://github.com/getmilpa/console/compare/v0.15.0...v0.16.0) (2026-09-07)
 
 

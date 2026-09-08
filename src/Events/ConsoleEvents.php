@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Milpa\Console\Events;
 
 use Milpa\Console\OperationRunner;
+use Milpa\Interfaces\Event\DeclaresEvents;
 use Milpa\Interfaces\Event\EventDeclaration;
 
 /**
@@ -30,8 +31,13 @@ use Milpa\Interfaces\Event\EventDeclaration;
  * it, and the house counts what was declared against what was dispatched (greenhouse
  * decisions/0228). Declaring is not enforced: a dispatcher that does not count declarations is
  * asked nothing, and `dispatch()` of an undeclared name keeps working.
+ *
+ * An emitter only declares once it is BUILT, and a process that never builds it never hears about
+ * its events. So this class is also the package's static holder ({@see DeclaresEvents}) and names
+ * itself in the manifest under `extra.milpa.events`: a host can read the class name from
+ * `vendor/composer/installed.json` and declare on behalf of an emitter it will never construct.
  */
-final class ConsoleEvents
+final class ConsoleEvents implements DeclaresEvents
 {
     /**
      * Before an operation runs. The payload carries an `InterceptionSlot` under `slot`, so a listener

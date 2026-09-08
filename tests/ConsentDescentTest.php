@@ -136,7 +136,7 @@ final class ConsentDescentTest extends TestCase
                 reversibility: Reversibility::Compensatable,
                 authority: Authority::Privileged,
                 subject: Subject::Executable,
-                rollbackContract: 'synthetic probe',
+                rollbackContract: 'probe:undo',
                 descents: [new Descent(
                     argument: 'dry_run',
                     whenValue: true,
@@ -179,10 +179,9 @@ final class ConsentDescentTest extends TestCase
         $destino = new EffectProfile(
             mutation: Mutation::None,
             externality: Externality::None,
-            reversibility: Reversibility::Guaranteed,
+            reversibility: Reversibility::NotApplicable,
             authority: $bajaAuthority ? Authority::Read : Authority::Privileged,
             subject: Subject::None,
-            rollbackContract: 'nothing ran, so there is nothing to undo',
         );
         $sonda = new Operation(name: 'sonda', description: 'the same handler, to read its digest', handler: $handler);
 
@@ -196,7 +195,7 @@ final class ConsentDescentTest extends TestCase
                 reversibility: Reversibility::Compensatable,
                 authority: Authority::Privileged,
                 subject: Subject::Executable,
-                rollbackContract: 'synthetic probe',
+                rollbackContract: 'probe:undo',
                 descents: [new Descent(
                     argument: 'dry_run',
                     whenValue: true,

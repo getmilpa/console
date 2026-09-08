@@ -68,10 +68,9 @@ final class RendererSwapTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -106,10 +105,9 @@ final class RendererSwapTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -145,10 +143,9 @@ final class RendererSwapTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -180,10 +177,9 @@ final class RendererSwapTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
         self::assertSame([], $this->correr($callado, new PlainTextCliRenderer()));
@@ -197,10 +193,9 @@ final class RendererSwapTest extends TestCase
                 effects: new EffectProfile(
                     mutation: Mutation::None,
                     externality: Externality::None,
-                    reversibility: Reversibility::Guaranteed,
+                    reversibility: Reversibility::NotApplicable,
                     authority: Authority::Read,
                     subject: Subject::None,
-                    rollbackContract: 'test probe: nothing leaves this process',
                 ),
             ),
             [],
@@ -237,10 +232,9 @@ final class RendererSwapTest extends TestCase
                     effects: new EffectProfile(
                         mutation: Mutation::None,
                         externality: Externality::None,
-                        reversibility: Reversibility::Guaranteed,
+                        reversibility: Reversibility::NotApplicable,
                         authority: Authority::Read,
                         subject: Subject::None,
-                        rollbackContract: 'test probe: nothing leaves this process',
                     ),
                 ),
                 [],
@@ -266,10 +260,9 @@ final class RendererSwapTest extends TestCase
                 effects: new EffectProfile(
                     mutation: Mutation::None,
                     externality: Externality::None,
-                    reversibility: Reversibility::Guaranteed,
+                    reversibility: Reversibility::NotApplicable,
                     authority: Authority::Read,
                     subject: Subject::None,
-                    rollbackContract: 'test probe: nothing leaves this process',
                 ),
             ),
             new JsonCliRenderer(),

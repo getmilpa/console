@@ -90,10 +90,9 @@ final class ConsentByCeilingTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: \Milpa\Command\Effect\Externality::None,
-                reversibility: \Milpa\Command\Effect\Reversibility::Guaranteed,
+                reversibility: \Milpa\Command\Effect\Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'nothing is written',
             ),
         );
 
@@ -112,7 +111,7 @@ final class ConsentByCeilingTest extends TestCase
                 reversibility: \Milpa\Command\Effect\Reversibility::Guaranteed,
                 authority: $authority,
                 subject: $subject,
-                rollbackContract: 'synthetic probe',
+                rollbackContract: 'probe:undo',
             ),
         );
     }

@@ -182,7 +182,7 @@ final class ConsentSatisfactionTest extends TestCase
                 reversibility: Reversibility::Guaranteed,
                 authority: Authority::Privileged,
                 subject: Subject::Executable,
-                rollbackContract: 'synthetic probe',
+                rollbackContract: 'probe:undo',
             ),
         );
     }
@@ -196,10 +196,9 @@ final class ConsentSatisfactionTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'nothing is written',
             ),
         );
     }

@@ -52,10 +52,9 @@ final class CliProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -88,10 +87,9 @@ final class CliProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -123,10 +121,9 @@ final class CliProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -182,7 +179,7 @@ final class CliProjectorTest extends TestCase
                 reversibility: Reversibility::Guaranteed,
                 authority: Authority::Read,
                 subject: Subject::Data,
-                rollbackContract: 'test probe: nothing leaves this process',
+                rollbackContract: 'probe:undo',
             ),
         );
         $runner = new CliRunner(signer: $signer);
@@ -227,10 +224,9 @@ final class CliProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -259,10 +255,9 @@ final class CliProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -278,10 +273,9 @@ final class CliProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         ); // inputSchema null
 
@@ -314,7 +308,7 @@ final class CliProjectorTest extends TestCase
                 reversibility: Reversibility::Guaranteed,
                 authority: Authority::Read,
                 subject: Subject::Data,
-                rollbackContract: 'test probe: nothing leaves this process',
+                rollbackContract: 'probe:undo',
             ),
         );
 
@@ -339,10 +333,9 @@ final class CliProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
         $solaHttp = new Operation(
@@ -353,10 +346,9 @@ final class CliProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -389,10 +381,9 @@ final class CliProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -429,10 +420,9 @@ final class CliProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
 
@@ -468,7 +458,7 @@ final class CliProjectorTest extends TestCase
                 reversibility: Reversibility::Guaranteed,
                 authority: Authority::Read,
                 subject: Subject::Data,
-                rollbackContract: 'test probe: nothing leaves this process',
+                rollbackContract: 'probe:undo',
             ),
         );
         $sinFirma = new Operation(
@@ -482,7 +472,7 @@ final class CliProjectorTest extends TestCase
                 reversibility: Reversibility::Guaranteed,
                 authority: Authority::Read,
                 subject: Subject::Data,
-                rollbackContract: 'test probe: nothing leaves this process',
+                rollbackContract: 'probe:undo',
             ),
         );
 
@@ -500,10 +490,9 @@ final class CliProjectorTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         ));
 

@@ -70,10 +70,12 @@ final class OperationScreenTest extends TestCase
             effects: new EffectProfile(
                 mutation: $muta ? Mutation::Persistent : Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                // The reversibility follows the flag too (milpa/command >= 0.25): a read declares
+                // NotApplicable, a mutation that promises an undo names the operation that undoes it.
+                reversibility: $muta ? Reversibility::Guaranteed : Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: $muta ? Subject::Data : Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
+                rollbackContract: $muta ? 'probe:undo' : null,
             ),
         );
     }
@@ -183,10 +185,9 @@ final class OperationScreenTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
         $pantalla = new OperationScreen($op, $this->container(), 60, 12, false);
@@ -216,10 +217,9 @@ final class OperationScreenTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
         $pantalla = new OperationScreen($op, $this->container(), 60, 12, false);
@@ -243,10 +243,9 @@ final class OperationScreenTest extends TestCase
             effects: new EffectProfile(
                 mutation: Mutation::None,
                 externality: Externality::None,
-                reversibility: Reversibility::Guaranteed,
+                reversibility: Reversibility::NotApplicable,
                 authority: Authority::Read,
                 subject: Subject::None,
-                rollbackContract: 'test probe: nothing leaves this process',
             ),
         );
         $pantalla = new OperationScreen($op, $this->container(), 60, 12, false);

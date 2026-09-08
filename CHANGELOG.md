@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.17.0](https://github.com/getmilpa/console/compare/v0.16.1...v0.17.0) (2026-09-08)
+
+
+### Features
+
+* declare every event this package dispatches to the dispatcher ([#61](https://github.com/getmilpa/console/issues/61)) ([4248c6c](https://github.com/getmilpa/console/commit/4248c6cc4988f2b1d16bb732e6cff55c7cef438c))
+
 ## [0.16.1](https://github.com/getmilpa/console/compare/v0.16.0...v0.16.1) (2026-09-08)
 
 

@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.18.1](https://github.com/getmilpa/console/compare/v0.18.0...v0.18.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* console does not use milpa/live, and its TUI field rendered blank ([#65](https://github.com/getmilpa/console/issues/65)) ([c4c79b2](https://github.com/getmilpa/console/commit/c4c79b229a33164fceb903477469d3e59ae2c2f3))
+
 ## [0.18.0](https://github.com/getmilpa/console/compare/v0.17.0...v0.18.0) (2026-09-08)
 
 

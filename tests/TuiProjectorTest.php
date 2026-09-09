@@ -23,6 +23,12 @@ use Milpa\Command\Effect\Subject;
 use Milpa\Command\Operation;
 use Milpa\Command\SurfaceModel;
 use Milpa\Console\TuiProjector;
+use Milpa\Live\Tui\NodeRenderers\BoxRenderer;
+use Milpa\Live\Tui\NodeRenderers\TextInputRenderer;
+use Milpa\Live\Tui\NodeRenderers\TextRenderer;
+use Milpa\Live\Tui\RetainedTuiRenderer;
+use Milpa\Live\Tui\SimpleTuiLayoutEngine;
+use Milpa\Live\Tui\TuiNodeRendererRegistry;
 use Milpa\Live\ValueObjects\Tui\TuiNode;
 use Milpa\ToolRuntime\Contracts\ToolContext;
 use PHPUnit\Framework\TestCase;
@@ -160,6 +166,45 @@ final class TuiProjectorTest extends TestCase
         );
 
         self::assertNotContains('firma', $ids);
+    }
+
+    /**
+     * EL CAMINO COMPLETO: proyectar, resolver renderers, **componer un cuadro** (greenhouse
+     * decisions/0237).
+     *
+     * Lo que faltaba no era una aserción más sobre el árbol: era ejercer el renderer de verdad. Esta
+     * suite proyectaba el modelo y lo leía, y nunca pasaba por el layout ni por el buffer, así que el
+     * paquete cuyo trabajo es proyectar a una TUI no componía una sola pantalla en su propia prueba.
+     *
+     * Y lo primero que encontró al escribirla fue un campo EN BLANCO: el projector emitía `label`,
+     * `type` y `required`, y ninguno lo pinta `TextInputRenderer`, que lee `prompt`/`placeholder`.
+     *
+     * De paso fija de dónde vienen esos símbolos. `Milpa\Live\` lo declaran DOS paquetes, y los diez
+     * que este archivo importa los sirve `milpa/live-tui`: por eso el manifiesto dejó de nombrar
+     * `milpa/live`, que no aporta ni un archivo a este camino.
+     */
+    public function test_el_camino_del_render_compone_un_cuadro(): void
+    {
+        $modelo = (new TuiProjector())->project($this->operacion());
+
+        $renderers = new TuiNodeRendererRegistry();
+        $renderers->register(new BoxRenderer());
+        $renderers->register(new TextRenderer());
+        $renderers->register(new TextInputRenderer());
+
+        $buffer = (new RetainedTuiRenderer(new SimpleTuiLayoutEngine(), $renderers))
+            ->render($modelo->node, 60, 20);
+
+        self::assertSame(60, $buffer->width());
+        self::assertSame(20, $buffer->height());
+
+        $lineas = $buffer->lines();
+        self::assertCount(20, $lineas);
+
+        $pantalla = implode("\n", $lineas);
+        self::assertNotSame('', trim($pantalla), 'un cuadro en blanco no es un cuadro');
+        self::assertStringContainsString('Crea un post', $pantalla, 'la descripción se pinta');
+        self::assertStringContainsString('title:', $pantalla, 'y el CAMPO también — antes salía en blanco');
     }
 
     /**

@@ -84,6 +84,15 @@ final class TuiProjector implements SurfaceProjector
                     'label' => $nombre,
                     'type' => \is_string($definicion['type'] ?? null) ? $definicion['type'] : 'string',
                     'required' => \in_array($nombre, $obligatorias, true),
+                    // AND the two props the field renderer actually paints (greenhouse decisions/0237).
+                    //
+                    // `label`, `type` and `required` describe the field; none of them is read by
+                    // `TextInputRenderer`, which paints `prompt`, `value` and `placeholder`. The row
+                    // therefore came out BLANK in a real terminal, and nothing said so because this
+                    // package's suite read the node tree and never composed a frame. Added rather than
+                    // renamed: the three above are this model's contract and other surfaces read them.
+                    'prompt' => $nombre . ': ',
+                    'placeholder' => \is_string($definicion['type'] ?? null) ? $definicion['type'] : 'string',
                 ],
                 focusable: true,
             );

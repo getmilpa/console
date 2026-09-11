@@ -80,7 +80,7 @@ final class RendererSwapTest extends TestCase
         $json = (new JsonCliRenderer())->describe($modelo);
 
         self::assertSame('validate', $texto[0]);
-        self::assertContains('  Opciones:', $texto);
+        self::assertContains('  Options:', $texto);
         self::assertStringContainsString('--target', implode("\n", $texto));
 
         self::assertCount(1, $json);
@@ -112,7 +112,7 @@ final class RendererSwapTest extends TestCase
         );
 
         self::assertSame(
-            ['ok: sí', 'checks:', '  manifest: OK'],
+            ['ok: yes', 'checks:', '  manifest: OK'],
             $this->correr($op, new PlainTextCliRenderer()),
         );
 

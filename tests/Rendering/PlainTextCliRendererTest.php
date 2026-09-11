@@ -65,7 +65,7 @@ final class PlainTextCliRendererTest extends TestCase
     /** Un valor ausente se dice `—`, que es distinto de una cadena vacía. */
     public function testAnAbsentValueIsSaidAndNotOmitted(): void
     {
-        self::assertSame(['a: —', 'b: sí'], $this->renderer()->present(['a' => null, 'b' => true]));
+        self::assertSame(['a: —', 'b: yes'], $this->renderer()->present(['a' => null, 'b' => true]));
     }
 
     /**
@@ -83,7 +83,7 @@ final class PlainTextCliRendererTest extends TestCase
 
         self::assertSame('checks:', $lineas[0]);
         self::assertSame('  name           ok', $lineas[1]);
-        self::assertSame('  uno            sí', $lineas[2]);
+        self::assertSame('  uno            yes', $lineas[2]);
         self::assertSame('  dos-mas-largo  no', $lineas[3]);
     }
 
@@ -127,9 +127,9 @@ final class PlainTextCliRendererTest extends TestCase
         $texto = implode("\n", $lineas);
         self::assertStringContainsString('validar', $texto);
         self::assertStringContainsString('--target=<string>', $texto);
-        self::assertStringContainsString('(obligatoria)', $texto);
+        self::assertStringContainsString('(required)', $texto);
         self::assertStringContainsString('Qué validar', $texto);
-        self::assertStringContainsString('(opcional)', $texto);
+        self::assertStringContainsString('(optional)', $texto);
     }
 
     /**

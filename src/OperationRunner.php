@@ -105,7 +105,7 @@ final readonly class OperationRunner
             $this->emitExecuted($operation, $input, $surface, null, stopped: true, context: $context);
 
             throw new OperationStoppedException(
-                "La operación «{$operation->name}» fue detenida por un listener de `operation.executing`.",
+                "Operation «{$operation->name}» was stopped by an `operation.executing` listener.",
             );
         }
 

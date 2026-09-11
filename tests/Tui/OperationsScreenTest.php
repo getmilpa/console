@@ -130,6 +130,6 @@ final class OperationsScreenTest extends TestCase
     {
         $shell = new OperationsScreen([], $this->container(), 60, 10, false);
 
-        self::assertStringContainsString('no declara ninguna operación', $shell->render());
+        self::assertStringContainsString('declares no operation', $shell->render());
     }
 }

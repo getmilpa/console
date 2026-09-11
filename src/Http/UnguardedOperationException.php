@@ -32,8 +32,8 @@ final class UnguardedOperationException extends \RuntimeException
     public static function scoped(string $operation, array $scopes): self
     {
         return new self(\sprintf(
-            'La operación «%s» exige los scopes [%s] y este host no cableó una %s. '
-            . 'Registra una política (milpa/admin publica la que usa milpa/auth) o quítale los scopes.',
+            'Operation «%s» requires the scopes [%s] and this host wired no %s. '
+            . 'Register a policy (milpa/admin publishes the one milpa/auth uses) or take the scopes off it.',
             $operation,
             implode(', ', $scopes),
             OperationHttpPolicy::class,
@@ -44,8 +44,8 @@ final class UnguardedOperationException extends \RuntimeException
     public static function permissioned(string $operation, string $permission): self
     {
         return new self(\sprintf(
-            'La operación «%s» exige el permiso «%s» y este host no cableó una %s. '
-            . 'Registra una política (milpa/admin publica la que usa milpa/auth) o quítale el permiso.',
+            'Operation «%s» requires the permission «%s» and this host wired no %s. '
+            . 'Register a policy (milpa/admin publishes the one milpa/auth uses) or take the permission off it.',
             $operation,
             $permission,
             OperationHttpPolicy::class,

@@ -217,8 +217,8 @@ final class OperationScreen
             $this->estado = 'firma-requerida';
             $this->ok = false;
             $this->salida = [
-                'Esta operación exige una firma, y una firma nombra ESTA llamada.',
-                'Córrela desde la terminal:',
+                'This operation needs a signature, and a signature names THIS call.',
+                'Run it from the terminal:',
                 '',
                 '  ' . $this->lineaCli(),
             ];
@@ -332,8 +332,8 @@ final class OperationScreen
         if ($this->operacion->mutating) {
             $hijos[] = new TuiNode('muta', 'text', props: [
                 'text' => $this->operacion->requiresConfirmation
-                    ? '  ⚠ muta y exige firma — no se corre desde aquí'
-                    : '  ⚠ esta operación cambia algo',
+                    ? '  ⚠ mutates and needs a signature — not run from here'
+                    : '  ⚠ this operation changes something',
             ]);
         }
 

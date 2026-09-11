@@ -55,15 +55,27 @@ final class TheCliSpeaksEnglishByDefaultTest extends TestCase
     /**
      * No rendered string in `src/` is Spanish.
      *
-     * The words are the ones the thirteen actually used, so the check fails on a relapse rather than
+     * The words are the ones the fourteen actually used, so the check fails on a relapse rather than
      * on a false positive: a Spanish word that never appeared in a rendered string here would be
      * caught by the ratchet, not by this.
+     *
+     * 🚨 AND IT IS CASE-INSENSITIVE, because the first version was not and a probe caught it.
+     * Probing this guard with `'la operación fue detenida'` — the lowercase form of a sentence this
+     * very slice had just translated — passed clean: the pattern held `La operación` with a capital,
+     * so one letter of case was the whole hole. A guard whose word list is exact in case certifies
+     * every other capitalisation of the same word, and a relapse rarely arrives in the same sentence
+     * twice.
+     *
+     * The lesson is not about this regex: **a guard is worth exactly one probe, and the probe has to
+     * differ from the thing the guard was written against.** Three sibling guards in app-runtime,
+     * admin and agent-workspace were probed the same way in the same session and held, which is why
+     * this one's failure was visible at all (greenhouse decisions/0306).
      */
     public function testNoRenderedStringInTheSourceIsSpanish(): void
     {
         $spanish = '/(Opciones|obligatori|opcional|Muta y exige|córrela|Córrela|exige una firma'
             . '|muta y exige|cambia algo|ninguna operación|desconocido|La operación|no cableó'
-            . '|Registra una política|contribuyó|no vacío|sin esquema|\bsí\b)/u';
+            . '|Registra una política|contribuyó|no vacío|sin esquema|\bsí\b)/ui';
 
         $offenders = [];
         foreach (self::phpFiles(\dirname(__DIR__, 2) . '/src') as $file) {

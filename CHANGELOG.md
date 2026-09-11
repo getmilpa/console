@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.18.3](https://github.com/getmilpa/console/compare/v0.18.2...v0.18.3) (2026-09-11)
+
+
+### Bug Fixes
+
+* **test:** the English guard was case-sensitive, and a probe caught it ([#70](https://github.com/getmilpa/console/issues/70)) ([44fc52e](https://github.com/getmilpa/console/commit/44fc52ee99258bab4b7702c49a9f79005b9ede29))
+
 ## [0.18.2](https://github.com/getmilpa/console/compare/v0.18.1...v0.18.2) (2026-09-11)
 
 

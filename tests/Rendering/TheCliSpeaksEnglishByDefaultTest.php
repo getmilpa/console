@@ -70,12 +70,51 @@ final class TheCliSpeaksEnglishByDefaultTest extends TestCase
      * differ from the thing the guard was written against.** Three sibling guards in app-runtime,
      * admin and agent-workspace were probed the same way in the same session and held, which is why
      * this one's failure was visible at all (greenhouse decisions/0306).
+     *
+     * 🚨 AND THE SAME HOLE OPENED AGAIN ONE LEVEL DOWN, IN THIS GUARD, THE DAY IT WAS WRITTEN. It went
+     * green while `coa panel` rendered FOUR Spanish strings to a human — `Cambian algo`, `Consultan`,
+     * `↑ N más arriba`, `↓ N más abajo` — because the list held `cambia algo` and a conjugation is not
+     * a capitalisation. `/ui` fixed the case and certified every other inflection of the same verb.
+     * The probe below is therefore a CONJUGATION and a word the list never held, not another case
+     * variant: the second probe has to differ from the first as much as the first differed from the
+     * pattern. Word lists lose to morphology; the accented-character rule is the one that does not
+     * (greenhouse decisions/0310).
      */
     public function testNoRenderedStringInTheSourceIsSpanish(): void
     {
-        $spanish = '/(Opciones|obligatori|opcional|Muta y exige|córrela|Córrela|exige una firma'
-            . '|muta y exige|cambia algo|ninguna operación|desconocido|La operación|no cableó'
-            . '|Registra una política|contribuyó|no vacío|sin esquema|\bsí\b)/ui';
+        // Two rules, and the second is the one that scales. A WORD LIST catches what somebody thought
+        // of; ANY WORD CARRYING A SPANISH ACCENT catches what nobody did — `más`, `operación`,
+        // `política`, `está`, and every inflection of them, without anyone maintaining a list. The
+        // list stays for the accentless offenders a human reads (`Consultan`, `cambia`, `Opciones`),
+        // and it is now written as STEMS so a conjugation cannot slip past: `cambia|cambian` became
+        // `cambia`, matched anywhere in the quoted text.
+        // 🚨 A STEM THAT MATCHES ENGLISH IS WORSE THAN NO STEM. The first widening used `contribu`,
+        // which flagged the English sentence «Provider … contributed an invalid section» — a guard that
+        // cries wolf gets its list trimmed by the next person, and the trim is where the real hole
+        // comes back. So the list holds ONLY words that carry no accent and cannot occur in English,
+        // and everything accented is left to the second rule, which needs no maintainer.
+        $spanish = '/(Opciones|obligatori|opcional|Muta y exige|cambia|Consulta|exige una firma'
+            . '|desconocido|sin esquema|más arriba|más abajo|fuera de gram|operacion|declarad'
+            // Rule two: any Spanish accent inside a quoted string. `más`, `operación`, `política`,
+            // `sección`, `único` and every inflection of them, without anyone remembering a list.
+            . '|[áéíóúñ¿¡]'
+            // Rule three, the one that needed no maintainer either: Spanish FUNCTION words, whole-word.
+            // Accents catch inflected content words; this catches the accentless sentence around them —
+            // `no es un path local absoluto` has neither an accent nor a listed noun, and it sat two
+            // lines from strings this guard did flag. English words are excluded on purpose: `sin` is
+            // one, and so are `a`, `e`, `o` — a rule that cries wolf gets trimmed, and the trim is
+            // where the hole comes back. Measured across this package's whole `src/` when adopted:
+            // 5 hits, all real, 0 false positives.
+            //
+            // WHAT THESE THREE RULES STILL MISS, said out loud so the next reader does not trust them
+            // further than they reach: accentless Spanish built only from content words, with no
+            // function word and nothing on the list — `Sin operaciones declaradas` was missed until
+            // `operacion` and `declarad` were added (both safe: English spells them with a `t` and an
+            // `e`). There is no rule short of language detection that closes this, so the guard is a
+            // ratchet, not a proof.
+            . '|\b(el|la|los|las|un|una|unos|unas|del|que|para|por|como|cada|entre|todos|todas'
+            . '|est[aáé]|ning[uú]n|ninguna|no es|no tiene|ya estaba)\b'
+            . ')/ui';
 
         $offenders = [];
         foreach (self::phpFiles(\dirname(__DIR__, 2) . '/src') as $file) {
@@ -93,7 +132,29 @@ final class TheCliSpeaksEnglishByDefaultTest extends TestCase
                     // `$field['obligatorio']` are identifiers that happen to be quoted, and they are
                     // the ratchet's subject like any other identifier. A guard that flagged them would
                     // fail on code this slice never touched.
-                    if (preg_match('/[\'"]' . preg_quote($text, '/') . '[\'"]\s*(=>|\])/', $line) === 1) {
+                    //
+                    // 🚨 AND THIS EXEMPTION WAS THE WHOLE HOLE, NOT THE WORD LIST. It used to read
+                    // `['\"]…['\"]\s*(=>|\])` — it looked only at what FOLLOWS the string, so a string
+                    // that CLOSES its array matched `\]` and was exempted as if it were a key. Every
+                    // `props: ['text' => 'algo']` in this package was therefore invisible, which is
+                    // exactly the shape of the four Spanish strings `coa panel` rendered to a human for
+                    // two slices. The word list was a red herring: widening it changed nothing, and the
+                    // probe that proved it was a mutation the widened list DID contain, still passing.
+                    //
+                    // A key is a string FOLLOWED by `=>`. A subscript is a string PRECEDED by `[`. A
+                    // value is a string PRECEDED by `=>`, `(` or `,` — and a value is what a human
+                    // reads. Deciding by what comes BEFORE is what separates the three
+                    // (greenhouse decisions/0310).
+                    $quoted = '[\'"]' . preg_quote($text, '/') . '[\'"]';
+                    $isKey = preg_match('/' . $quoted . '\s*=>/', $line) === 1;
+                    $isSubscript = preg_match('/\[\s*' . $quoted . '\s*\]/', $line) === 1;
+                    // A NODE'S ID is the third thing a machine reads and a person does not. `new
+                    // TuiNode('operacion:' . $op->name, …)` is an address; the words live in `props`.
+                    // It is exempt for the same reason a key is — and the companion assertion in
+                    // OperationsScreenTest keeps ids from BEING words in the first place, which is the
+                    // half this exemption depends on (greenhouse decisions/0310).
+                    $isNodeId = preg_match('/new TuiNode\(\s*' . $quoted . '/', $line) === 1;
+                    if ($isKey || $isSubscript || $isNodeId) {
                         continue;
                     }
                     if (preg_match($spanish, $text) === 1) {

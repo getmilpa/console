@@ -50,6 +50,9 @@ final class OperationsScreen
 
     private ?string $nombreAbierta = null;
 
+    /** The words this screen shows — English by default, the host's when it has a language. */
+    private readonly ScreenLabels $labels;
+
     /**
      * @param iterable<Operation> $operaciones
      */
@@ -60,9 +63,11 @@ final class OperationsScreen
         private readonly int $height = 24,
         private readonly bool $ansi = true,
         private readonly ?\Milpa\Interfaces\Event\MilpaEventDispatcherInterface $dispatcher = null,
+        ?ScreenLabels $labels = null,
     ) {
-        // Consultan primero y cambian algo después, que es el orden en que alguien decide: se mira
-        // antes de tocar. Dentro de cada grupo, alfabético — un orden que no cambia entre corridas.
+        $this->labels = $labels ?? new ScreenLabels();
+        // Reading first and changing second, which is the order in which someone decides: you look
+        // before you touch. Inside each group, alphabetical — an order that does not move between runs.
         $lista = [];
         foreach ($operaciones as $operacion) {
             if ($operacion->supportsSurface('tui')) {
@@ -198,14 +203,19 @@ final class OperationsScreen
         $hasta = min($total, $desde + $porVer);
 
         if ($desde > 0) {
-            $hijos[] = new TuiNode('antes', 'text', props: ['text' => '    ↑ ' . $desde . ' más arriba']);
+            $hijos[] = new TuiNode('antes', 'text', props: ['text' => '    ' . \sprintf($this->labels->moreAbove, $desde)]);
         }
 
         $grupoAnterior = null;
         foreach (\array_slice($this->operaciones, $desde, $hasta - $desde) as $operacion) {
-            $grupo = $operacion->mutating ? 'Cambian algo' : 'Consultan';
+            // 🚨 THE ID AND THE WORD ARE TWO THINGS. One string used to be both the node's id and the
+            // header a person reads, so translating the header silently renamed the node — and a node
+            // id is what a test, a key handler and a diff all address it by. The id is now the FACT
+            // (`mutating` / `reading`); the word is the label's (greenhouse decisions/0310).
+            $grupo = $operacion->mutating ? 'mutating' : 'reading';
             if ($grupo !== $grupoAnterior) {
-                $hijos[] = new TuiNode('grupo:' . $grupo, 'text', props: ['text' => $grupo . ':']);
+                $palabra = $operacion->mutating ? $this->labels->mutating : $this->labels->reading;
+                $hijos[] = new TuiNode('grupo:' . $grupo, 'text', props: ['text' => $palabra . ':']);
                 $grupoAnterior = $grupo;
             }
 
@@ -217,11 +227,11 @@ final class OperationsScreen
         }
 
         if ($hasta < $total) {
-            $hijos[] = new TuiNode('despues', 'text', props: ['text' => '    ↓ ' . ($total - $hasta) . ' más abajo']);
+            $hijos[] = new TuiNode('despues', 'text', props: ['text' => '    ' . \sprintf($this->labels->moreBelow, $total - $hasta)]);
         }
 
         if ($hijos === []) {
-            $hijos[] = new TuiNode('vacio', 'text', props: ['text' => 'This app declares no operation for this surface.']);
+            $hijos[] = new TuiNode('vacio', 'text', props: ['text' => $this->labels->noOperations]);
         }
 
         $hijos[] = new TuiNode('salir', 'text', props: [

@@ -75,15 +75,15 @@ final class SectionDiscovery
     private function assertValid(Section $section, string $providerClass): void
     {
         if (preg_match('/^[a-z][a-z0-9.-]*$/', $section->id) !== 1) {
-            throw SectionDiscoveryException::invalidSection($providerClass, "id '{$section->id}' fuera de gramática");
+            throw SectionDiscoveryException::invalidSection($providerClass, "id '{$section->id}' is outside the declared grammar");
         }
         if ($section->title === '') {
-            throw SectionDiscoveryException::invalidSection($providerClass, "la sección '{$section->id}' no tiene title");
+            throw SectionDiscoveryException::invalidSection($providerClass, "section '{$section->id}' has no title");
         }
         $href = $section->href;
         if ($href === '' || $href[0] !== '/' || str_starts_with($href, '//')
             || str_contains($href, '://') || preg_match('/[\x00-\x1f\\\\]/', $href) === 1) {
-            throw SectionDiscoveryException::invalidSection($providerClass, "href '{$href}' no es un path local absoluto");
+            throw SectionDiscoveryException::invalidSection($providerClass, "href '{$href}' is not a local absolute path");
         }
     }
 }

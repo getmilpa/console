@@ -107,7 +107,7 @@ final class TuiProjector implements SurfaceProjector
 
         return new TuiOperationModel(
             $op->name,
-            new TuiNode('operacion:' . $op->name, 'box', props: ['title' => $op->name], children: $hijos),
+            new TuiNode('operation:' . $op->name, 'box', props: ['title' => $op->name], children: $hijos),
         );
     }
 }

@@ -39,8 +39,8 @@ final class SectionDiscoveryException extends \LogicException
     public static function duplicateId(string $id, string $providerClass): self
     {
         return new self(
-            '[' . self::CODE_DUPLICATE . "] El id de sección '{$id}' ya estaba registrado y {$providerClass} "
-            . 'lo volvió a contribuir. Cada sección del admin necesita un id único entre TODOS los providers.',
+            '[' . self::CODE_DUPLICATE . "] Section id '{$id}' was already registered and {$providerClass} "
+            . 'contributed it again. Every section of the panel needs an id unique across ALL providers.',
         );
     }
 
@@ -48,8 +48,8 @@ final class SectionDiscoveryException extends \LogicException
     public static function noSections(): self
     {
         return new self(
-            '[' . self::CODE_EMPTY . '] Ningún plugin booteado contribuyó secciones del admin. El Hub no '
-            . 'puede redirigir a nada — implementa SectionProvider en al menos un plugin.',
+            '[' . self::CODE_EMPTY . '] No booted plugin contributed a panel section. The Hub has '
+            . 'nowhere to redirect — implement SectionProvider in at least one plugin.',
         );
     }
 }

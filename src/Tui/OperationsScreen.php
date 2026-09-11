@@ -221,11 +221,11 @@ final class OperationsScreen
         }
 
         if ($hijos === []) {
-            $hijos[] = new TuiNode('vacio', 'text', props: ['text' => 'Esta app no declara ninguna operación para esta superficie.']);
+            $hijos[] = new TuiNode('vacio', 'text', props: ['text' => 'This app declares no operation for this surface.']);
         }
 
         $hijos[] = new TuiNode('salir', 'text', props: [
-            'text' => ($enfocado === 'salir' ? '  ▸ ' : '    ') . '[Enter] abrir · [Tab] siguiente · [Esc] volver · ⚠ = exige firma',
+            'text' => ($enfocado === 'salir' ? '  ▸ ' : '    ') . '[Enter] open · [Tab] next · [Esc] back · ⚠ = needs a signature',
         ]);
 
         return new TuiNode('root', 'box', props: ['title' => 'coa · shell'], children: $hijos);

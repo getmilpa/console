@@ -264,7 +264,7 @@ final class HttpProjector implements SurfaceProjector
         // sistema de identidad. El atributo `milpa.auth` es la costura, y quien lo pone declara su
         // forma — un actor con `id`. Sin esa forma, no hay actor.
         $auth = $request->getAttribute('milpa.auth');
-        $ejecutor = (getenv('USER') ?: getenv('USERNAME') ?: 'desconocido') . '@' . (gethostname() ?: 'desconocido');
+        $ejecutor = (getenv('USER') ?: getenv('USERNAME') ?: 'unknown') . '@' . (gethostname() ?: 'unknown');
         $actor = \is_object($auth) && property_exists($auth, 'actor') ? $auth->actor : null;
         $actorId = \is_object($actor) && property_exists($actor, 'id') && \is_string($actor->id) ? $actor->id : null;
 

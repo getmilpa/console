@@ -37,7 +37,7 @@ final class PlainTextCliRenderer implements CliRenderer
 
         if ($model->flags !== []) {
             $lineas[] = '';
-            $lineas[] = '  Opciones:';
+            $lineas[] = '  Options:';
             // El modelo ya garantiza la forma de cada bandera (`array{type: string, required: bool}`),
             // así que aquí no hay nada que defender: revalidarlo sería desconfiar del tipo que el
             // projector ya fijó, y PHPStan lo señala como código muerto — con razón.
@@ -45,7 +45,7 @@ final class PlainTextCliRenderer implements CliRenderer
                 $lineas[] = rtrim(\sprintf(
                     '    --%-24s %-14s %s',
                     $nombre . '=<' . $definicion['type'] . '>',
-                    $definicion['required'] ? '(obligatoria)' : '(opcional)',
+                    $definicion['required'] ? '(required)' : '(optional)',
                     $definicion['description'],
                 ));
             }
@@ -53,7 +53,7 @@ final class PlainTextCliRenderer implements CliRenderer
 
         if ($model->needsSignature) {
             $lineas[] = '';
-            $lineas[] = '  Muta y exige autorización: córrela con --sign.';
+            $lineas[] = '  Mutates and needs your authorization: re-run it with --sign.';
         }
 
         return $lineas;
@@ -232,7 +232,7 @@ final class PlainTextCliRenderer implements CliRenderer
             return '—';
         }
         if (\is_bool($valor)) {
-            return $valor ? 'sí' : 'no';
+            return $valor ? 'yes' : 'no';
         }
         if (\is_scalar($valor)) {
             return (string) $valor;

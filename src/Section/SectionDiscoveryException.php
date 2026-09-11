@@ -29,9 +29,9 @@ final class SectionDiscoveryException extends \LogicException
     public static function invalidSection(string $providerClass, string $reason): self
     {
         return new self(
-            '[' . self::CODE_INVALID . "] El provider {$providerClass} contribuyó una sección inválida: {$reason}. "
-            . 'Reglas: id con gramática ^[a-z][a-z0-9.-]*$, title no vacío, href local y absoluto '
-            . '(/ruta — sin esquema, sin //, sin caracteres de control).',
+            '[' . self::CODE_INVALID . "] Provider {$providerClass} contributed an invalid section: {$reason}. "
+            . 'Rules: an id matching ^[a-z][a-z0-9.-]*$, a non-empty title, and a local absolute href '
+            . '(/path — no scheme, no //, no control characters).',
         );
     }
 

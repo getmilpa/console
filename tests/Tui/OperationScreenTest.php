@@ -264,6 +264,6 @@ final class OperationScreenTest extends TestCase
         self::assertStringContainsString('plugin', $texto);
         self::assertStringContainsString('strict', $texto);
         self::assertStringContainsString('*', $texto, 'lo obligatorio se marca');
-        self::assertStringContainsString('cambia algo', $texto);
+        self::assertStringContainsString('changes something', $texto);
     }
 }

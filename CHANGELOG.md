@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.18.4](https://github.com/getmilpa/console/compare/v0.18.3...v0.18.4) (2026-09-11)
+
+
+### Bug Fixes
+
+* **tui:** the operations screen takes its words from the host, and the guard that missed them decides by what precedes a string ([#72](https://github.com/getmilpa/console/issues/72)) ([c4a1ce3](https://github.com/getmilpa/console/commit/c4a1ce36bfeeedbc540c5a4b662b5bc4f241d738))
+
 ## [0.18.3](https://github.com/getmilpa/console/compare/v0.18.2...v0.18.3) (2026-09-11)
 
 

@@ -67,6 +67,24 @@ The pieces are seams, not concretions: `OperationSigner` is the port,
 [`GnupgOperationSigner`](src/GnupgOperationSigner.php) an adapter, and verification and nonce
 spending live behind `milpa/tool-runtime`'s `OperationAuthorizer`.
 
+`CliRunner` accepts a `signerAuthority` resolver for the verified current signer. A recognized
+signer's scopes pass through the shared `PolicyGate` before any handler receives a grant.
+An explicit `--sign` also authenticates read operations: the handler receives attribution and
+the caller's separate `ToolContext`, allowing a delegating driver to retain that authority.
+A resolver failure refuses the call. Returning `null` retains the existing local signing behavior;
+the host decides when that fallback applies. Stored session ownership supplies no caller authority.
+
+`CliRunner` also accepts `callerAuthority` for an authenticated token. A host `CallPolicy` registered
+in the container judges the concrete arguments before asking for a signature, and again with the
+verified signer's authority. `McpProjector` installs that same policy in a concrete `ToolRegistry`.
+Its `OperationToolHandler` forwards the registry's explicit context to `OperationRunner`; argument
+payloads cannot supply that context.
+
+A host may register `OperationBoundary` in the container. The runner passes the operation, input,
+current authority and a closure for the declared handler to it on every surface. This is where the
+host can require a confined executor; the ordinary handler runs only when the boundary calls its
+closure. Delegating operations must carry the third handler argument into every child call.
+
 ## Testing your own surfaces
 
 `Milpa\Console\Testing\SignsOperations` ships in `src/` on purpose: Composer does not autoload a
@@ -88,8 +106,8 @@ projector.
 controller those routes point at. It arrived in 0.4.0 — until then it lived in `milpa/skeleton`,
 because moving it as-is would have dragged `milpa/auth` into a floor meant to run without it.
 
-What made the move possible is that identity now sits behind an interface. The projector knows
-nothing about who is calling; `OperationHttpPolicy` does, and
+What made the move possible is that admission sits behind an interface. The projector delegates
+that decision to `OperationHttpPolicy`, and
 [`milpa/admin`](https://packagist.org/packages/milpa/admin) publishes the implementation that uses
 `milpa/auth`. Write your own and the projector will use it.
 
@@ -108,6 +126,13 @@ operation that declares scopes with no policy wired throws `UnguardedOperationEx
 rather than running unguarded. It stays a 500 and never a 401/403 — the caller did nothing wrong; the
 host declared something protected and left it without a guard. An operation that declares neither
 scopes nor a permission never touches any of this.
+
+When an HTTP operation delegates work to tools, its handler can accept a third optional argument,
+`?Milpa\ToolRuntime\Contracts\ToolContext $authority`. The projector builds it from the authenticated request
+and `OperationRunner` carries it alongside the second argument, `InvocationContext`. Attribution
+and authority stay separate: the runner neither authorizes child calls nor stores a current user
+in the container. The delegate must pass this authority to its tool gate. Missing authentication
+or an empty scope list yields an empty list; it never inherits a local terminal's wildcard.
 
 ## Requirements
 

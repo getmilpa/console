@@ -121,6 +121,12 @@ final class McpProjector implements SurfaceProjector
      */
     public function materialize(McpToolModel $model, ToolRegistryInterface $registry, DIContainerInterface $container): void
     {
+        if ($registry instanceof \Milpa\ToolRuntime\ToolRegistry && $container->has(\Milpa\ToolRuntime\Contracts\CallPolicy::class)) {
+            $policy = $container->get(\Milpa\ToolRuntime\Contracts\CallPolicy::class);
+            if ($policy instanceof \Milpa\ToolRuntime\Contracts\CallPolicy) {
+                $registry->getPolicyGate()->setCallPolicy($policy);
+            }
+        }
         $registry->register(
             $model->name,
             $model->description,
@@ -174,7 +180,7 @@ final class McpProjector implements SurfaceProjector
         if ($operacion !== null) {
             $runner = new OperationRunner($container, $this->dispatcher);
 
-            return static fn (array $args): mixed => $runner->run($operacion, $args, 'mcp');
+            return new OperationToolHandler($runner, $operacion);
         }
 
         // Un modelo armado a mano, sin la operación de la que salió: se ejecuta como antes. No hay

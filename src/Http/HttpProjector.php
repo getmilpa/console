@@ -23,6 +23,7 @@ use Milpa\Console\ConfirmTokens;
 use Milpa\Console\ConfirmTokenStore;
 use Milpa\Console\Consent;
 use Milpa\Console\OperationRunner;
+use Milpa\ToolRuntime\Contracts\ToolContext;
 use Milpa\Console\OperationStoppedException;
 use Milpa\Console\SchemaCoercer;
 use Milpa\Console\SchemaCoercionException;
@@ -226,7 +227,7 @@ final class HttpProjector implements SurfaceProjector
         try {
             /** @var mixed $data */
             $data = (new OperationRunner($this->container, $this->dispatcher))
-                ->run($op, $input, 'http', $this->contextoDe($request, $op));
+                ->run($op, $input, 'http', $this->contextoDe($request, $op), $this->authorityFrom($request));
         } catch (OperationStoppedException $e) {
             // Detenida por un listener: 409, porque no es culpa de quien llamó ni un error del
             // servidor — es un estado que impide correrla ahora.
@@ -249,9 +250,9 @@ final class HttpProjector implements SurfaceProjector
      *
      * ── LO QUE SE TRADUCE Y LO QUE SE DEJA ──────────────────────────────────────────────────────
      *
-     * Del `AuthContext` sale **quién** y **si se verificó**. Los scopes NO cruzan: ya sirvieron para
-     * que la política autorizara, y una operación que puede leerlos es una que puede volver a decidir
-     * con ellos. La política autoriza; la operación atribuye.
+     * InvocationContext carries attribution only. Scope authority travels separately through
+     * authorityFrom(), for a driver that originates further governed calls. Admission to the outer
+     * operation does not authorize its child calls (greenhouse decisions/0316).
      *
      * Sin actor autenticado se devuelve un contexto **sin actor** —no uno con el proceso del servidor
      * en su lugar—. Poner `www-data` donde iba una persona convierte una cadena de custodia real en
@@ -286,6 +287,24 @@ final class HttpProjector implements SurfaceProjector
             executor: $ejecutor,
             correlationId: $request->getHeaderLine('X-Request-Id') ?: null,
         );
+    }
+
+    /**
+     * Carry the authenticated request's authority separately from attribution, for handlers that
+     * originate governed tool calls. Empty or absent scopes never become a local wildcard.
+     * No request identity is stored in the application container (greenhouse decisions/0316).
+     */
+    private function authorityFrom(ServerRequestInterface $request): ToolContext
+    {
+        $auth = $request->getAttribute('milpa.auth');
+        $authenticated = \is_object($auth) && \is_callable([$auth, 'isAuthenticated']) && $auth->isAuthenticated();
+        $actor = $authenticated && property_exists($auth, 'actor') ? $auth->actor : null;
+        $id = \is_object($actor) && property_exists($actor, 'id') && \is_string($actor->id) ? $actor->id : null;
+        $scopes = \is_object($actor) && property_exists($actor, 'scopes') && \is_array($actor->scopes)
+            ? array_values(array_filter($actor->scopes, '\\is_string'))
+            : [];
+
+        return new ToolContext(principal: $id, channel: 'web', scopes: $scopes);
     }
 
     /**

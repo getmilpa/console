@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.20.0](https://github.com/getmilpa/console/compare/v0.18.4...v0.20.0) (2026-09-12)
+
+
+### Features
+
+* **authority:** preserve caller scopes across operation surfaces ([88bd8b2](https://github.com/getmilpa/console/commit/88bd8b2220cc4621e1abbe4f95dd832260dca5d9))
+
 ## [0.18.4](https://github.com/getmilpa/console/compare/v0.18.3...v0.18.4) (2026-09-11)
 
 

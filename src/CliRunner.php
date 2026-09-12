@@ -15,6 +15,10 @@ declare(strict_types=1);
 namespace Milpa\Console;
 
 use Milpa\Command\Operation;
+use Milpa\Command\InvocationContext;
+use Milpa\ToolRuntime\Contracts\ToolContext;
+use Milpa\ToolRuntime\Identity\VerifiedSigner;
+use Milpa\ToolRuntime\PolicyGate;
 use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Console\Rendering\CliRenderer;
 use Milpa\Console\Rendering\PlainTextCliRenderer;
@@ -53,6 +57,9 @@ final class CliRunner
      * operaciones no debería tener que elegir formato para empezar. Cambiarlo por
      * {@see \Milpa\Console\Rendering\JsonCliRenderer} no toca ni esta clase ni el projector, que es
      * exactamente lo que la segunda cláusula de ADR-0035 pide poder hacer.
+     *
+     * @param (\Closure(VerifiedSigner): ?ToolContext)|null $signerAuthority resolves the host's current
+     *                                                                       recognition after verification
      */
     public function __construct(
         private readonly SchemaCoercer $coercer = new SchemaCoercer(),
@@ -62,6 +69,8 @@ final class CliRunner
         // Opcional, como en todo lo demás: un host que no cablea eventos corre igual y lo que pierde
         // son los ganchos, no la capacidad.
         private readonly ?MilpaEventDispatcherInterface $dispatcher = null,
+        private readonly ?\Closure $signerAuthority = null,
+        private readonly ?ToolContext $callerAuthority = null,
     ) {
     }
 
@@ -71,18 +80,16 @@ final class CliRunner
      * The refusal paths matter as much as the success one, so each says what happened and what to
      * do: a card that declined is not a bad signature, and a bad signature is not an expired one.
      *
-     * The container comes in because a granted verdict no longer dies at the banner: the gate
-     * registers the grant there so the handler about to run can consume it (greenhouse
-     * decisions/0056). Refusals register nothing — the container after a refusal looks exactly as
-     * it did before the gate.
+     * The receipt returns to the caller for scope judgment before it can reach a handler.
+     * Verification alone cannot spend the authority of a recognized signer (greenhouse 0317).
      *
      * @param array<string, mixed>   $input
      * @param list<string>           $argv
      * @param callable(string): void $out
      *
-     * @return int 0 when authorized, otherwise the exit code to return
+     * @return GrantedAuthorization|int the verified receipt, or the refusal exit code
      */
-    private function authorizeBySignature(Operation $op, array $input, array $argv, DIContainerInterface $container, callable $out): int
+    private function authorizeBySignature(Operation $op, array $input, array $argv, callable $out): GrantedAuthorization|int
     {
         if (!\in_array('--sign', $argv, true)) {
             // SAY THE FACT THE GATE READ, not one the operation may never have declared: a read with no
@@ -129,10 +136,6 @@ final class CliRunner
             return 1;
         }
 
-        // Printed, not just recorded: the operator sees which key answered before the effect
-        // happens, so a wrong card is caught by the person rather than by an audit weeks later.
-        $out('✓ authorized by ' . ($verdict->signer?->principal() ?? 'unknown'));
-
         // And carried, not just printed: the verdict used to end at that banner, which left a
         // handler wanting to persist the grant as an assertion (greenhouse decisions/0056) with
         // nothing but its own retelling. The RAW payload and signature travel with it because the
@@ -141,13 +144,12 @@ final class CliRunner
         // verdict always carries its signer, and a payload the authorizer just accepted parses.
         $authorization = OperationAuthorization::fromCanonical($payload);
         if ($authorization !== null && $verdict->signer !== null) {
-            $container->registerService(
-                GrantedAuthorization::class,
-                new GrantedAuthorization($authorization, $verdict->signer, $payload, $signature),
-            );
+            return new GrantedAuthorization($authorization, $verdict->signer, $payload, $signature);
         }
 
-        return 0;
+        $out('The verified signature did not produce a usable authorization receipt.');
+
+        return 1;
     }
 
     /**
@@ -198,15 +200,69 @@ final class CliRunner
         // in the abstract (greenhouse decisions/0029, measured inert in evidence/0152). The input is
         // already derived above, so this surface has them; the catalogue surfaces do not, and there
         // the ceiling stays up.
-        if (Consent::demanded($op, $input)) {
+        $authority = $this->callerAuthority;
+        $policy = new PolicyGate();
+        $hostPolicy = $container->has(\Milpa\ToolRuntime\Contracts\CallPolicy::class)
+            ? $container->get(\Milpa\ToolRuntime\Contracts\CallPolicy::class) : null;
+        if ($hostPolicy instanceof \Milpa\ToolRuntime\Contracts\CallPolicy) {
+            $policy->setCallPolicy($hostPolicy);
+        }
+        $tool = new \Milpa\ToolRuntime\ToolDefinition(
+            McpProjector::toolName($op->name),
+            $op->description,
+            $op->inputSchema ?? [],
+            $op->handler,
+            scopes: $op->scopes,
+            mutating: $op->mutating,
+        );
+        $admission = $policy->authorizeCall($authority ?? ToolContext::cli(), $tool, $input);
+        if (!$admission->allowed) {
+            foreach ($this->renderer->presentError((string) $admission->reason) as $line) {
+                $out($line);
+            }
+            return 1;
+        }
+        $context = null;
+        if (Consent::demanded($op, $input) || \in_array('--sign', $argv, true)) {
             // The input has to be derived first now, which is the whole reason the order changed:
             // `--yes` could be answered before knowing what the arguments were, because it never
             // referred to them. A signature is over the arguments, so there is nothing to sign
             // until they exist.
-            $authorized = $this->authorizeBySignature($op, $input, $argv, $container, $out);
-            if ($authorized !== 0) {
+            $authorized = $this->authorizeBySignature($op, $input, $argv, $out);
+            if (\is_int($authorized)) {
                 return $authorized;
             }
+
+            // A signature proves the current caller; the host's recognition bounds what it may do.
+            // Never recover that caller from an old session's ownership assertion (greenhouse 0317).
+            try {
+                $authority = $this->signerAuthority?->__invoke($authorized->signer) ?? $authority;
+            } catch (\Throwable $error) {
+                foreach ($this->renderer->presentError($error->getMessage()) as $line) {
+                    $out($line);
+                }
+
+                return 1;
+            }
+            if ($authority !== null) {
+                $scope = $policy->authorizeCall($authority, $tool, $input);
+                if (!$scope->allowed) {
+                    foreach ($this->renderer->presentError((string) $scope->reason) as $line) {
+                        $out($line);
+                    }
+
+                    return 1;
+                }
+            }
+            $context = new InvocationContext(
+                actor: 'key:' . $authorized->signer->fingerprint,
+                verified: true,
+                channel: 'cli',
+                authorizationId: 'sha256:' . hash('sha256', $authorized->payload),
+            );
+            // Publish only after both checks passed: a refused caller must leave no usable grant.
+            $out('✓ authorized by ' . $authorized->signer->principal());
+            $container->registerService(GrantedAuthorization::class, $authorized);
         }
 
         // Por el runner y no a mano: es la única costura por la que pasan las cuatro superficies, y
@@ -214,7 +270,7 @@ final class CliRunner
         // cuenta, un listener que auditaba una operación que muta la veía por MCP y no aquí.
         try {
             /** @var mixed $result */
-            $result = (new OperationRunner($container, $this->dispatcher))->run($op, $input, 'cli');
+            $result = (new OperationRunner($container, $this->dispatcher))->run($op, $input, 'cli', $context, $authority);
         } catch (OperationStoppedException $e) {
             foreach ($this->renderer->presentError($e->getMessage()) as $linea) {
                 $out($linea);

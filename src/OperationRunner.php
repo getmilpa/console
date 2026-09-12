@@ -16,6 +16,7 @@ namespace Milpa\Console;
 
 use Milpa\Command\InvocationContext;
 use Milpa\Command\Operation;
+use Milpa\ToolRuntime\Contracts\ToolContext;
 use Milpa\Console\Events\ConsoleEvents;
 use Milpa\Console\Events\OperationExecutedEvent;
 use Milpa\Console\Events\OperationExecutingEvent;
@@ -71,9 +72,12 @@ final readonly class OperationRunner
     /**
      * Corre la operación con esta entrada y devuelve lo que contestó.
      *
-     * @param array<string, mixed> $input ya coercionado por quien conoce la superficie: el CLI parte
-     *                                    de argv, HTTP de query + cuerpo, el TUI de campos. Convertir
-     *                                    texto a tipos es de la superficie; ejecutar es de aquí.
+     * @param array<string, mixed> $input     ya coercionado por quien conoce la superficie: el CLI parte
+     *                                        de argv, HTTP de query + cuerpo, el TUI de campos. Convertir
+     *                                        texto a tipos es de la superficie; ejecutar es de aquí.
+     * @param ToolContext|null     $authority the caller's tool authority, passed as a separate third
+     *                                        handler argument for drivers that originate governed calls.
+     *                                        The optional host boundary judges it; this runner never stores it.
      *
      * @throws \Throwable lo que el handler lance, después de emitir `operation.executed`
      */
@@ -82,6 +86,7 @@ final readonly class OperationRunner
         array $input,
         string $surface,
         ?InvocationContext $context = null,
+        ?ToolContext $authority = null,
     ): mixed {
         $slot = new InterceptionSlot();
         $this->dispatcher?->dispatch(
@@ -110,7 +115,12 @@ final readonly class OperationRunner
         }
 
         try {
-            $resultado = $this->invoke($operation, $input, $context);
+            $next = fn (): mixed => $this->invoke($operation, $input, $context, $authority);
+            $boundary = $this->container->has(OperationBoundary::class)
+                ? $this->container->get(OperationBoundary::class) : null;
+            $resultado = $boundary instanceof OperationBoundary
+                ? $boundary->execute($operation, $input, $authority, $next)
+                : $next();
         } catch (\Throwable $e) {
             // Se audita el fracaso ANTES de propagarlo: un error que no deja rastro es el que nadie
             // encuentra al día siguiente.
@@ -152,7 +162,7 @@ final readonly class OperationRunner
     /**
      * @param array<string, mixed> $input
      */
-    private function invoke(Operation $operation, array $input, ?InvocationContext $context = null): mixed
+    private function invoke(Operation $operation, array $input, ?InvocationContext $context = null, ?ToolContext $authority = null): mixed
     {
         // EL CONTEXTO VIAJA COMO SEGUNDO ARGUMENTO, y ésa es toda la mecánica: un handler que no lo
         // declara simplemente lo ignora —PHP no se queja de un argumento de más— y uno que sí lo
@@ -161,9 +171,12 @@ final readonly class OperationRunner
         // La alternativa era el contenedor, y la descartó Rod con el argumento que la cierra: con
         // estado ambiental, OLVIDARSE de leer al actor no falla. Y lo que no falla al olvidarse
         // termina olvidado.
+        // A driver may also receive the separate third argument: the caller's tool authority.
+        // The driver passes it to its governed door; ordinary handlers may ignore it. Keeping it
+        // out of InvocationContext preserves the distinction between authorization and attribution.
         $handler = $operation->handler;
         if (\is_callable($handler)) {
-            return $handler($input, $context);
+            return $handler($input, $context, $authority);
         }
 
         [$clase, $metodo] = $handler;
@@ -172,7 +185,7 @@ final readonly class OperationRunner
             throw new \RuntimeException("operation '{$operation->name}': {$clase} did not resolve to an object.");
         }
 
-        return $instancia->{$metodo}($input, $context);
+        return $instancia->{$metodo}($input, $context, $authority);
     }
 
     /**

@@ -56,6 +56,21 @@ use Milpa\Console\McpProjector;
 (new McpProjector())->project($operations, $registry, $container);
 ```
 
+## Structured command input
+
+An input field declared as `type: object` accepts an associative object from HTTP or a JSON
+object in one CLI flag, for example `--source='{"session":"s-1","seq":7}'`. For an array
+whose `items.type` is `object`, repeat the flag with one JSON object per item:
+`--edits='{"find":"old","replace":"new"}'`. The shared coercer decodes these declared
+structures before authorization and execution. Invalid JSON, scalar JSON and nonempty lists
+in an object field are refused.
+
+String fields and arrays without object items keep their existing values; JSON-looking strings
+are not interpreted there. Object property values are preserved, including nested values and
+unknown properties. This is transport coercion, not full JSON Schema validation: operations
+remain responsible for validating their nested input contract. HTTP's associative JSON decode
+represents both an empty object and an empty list as `[]`; the coercer cannot distinguish them.
+
 ## Consent names the call
 
 On a terminal, `requiresConfirmation: true` is not a `--yes` flag. A flag consents in the abstract —

@@ -67,7 +67,7 @@ final class SchemaCoercer
             }
 
             try {
-                $value = $this->coerceValue($raw[$name], $type);
+                $value = $this->coerceValue($raw[$name], $type, $spec);
             } catch (\InvalidArgumentException $e) {
                 $errors[] = "field '{$name}': " . $e->getMessage();
                 continue;
@@ -88,15 +88,71 @@ final class SchemaCoercer
         return $out;
     }
 
-    private function coerceValue(mixed $raw, string $type): mixed
+    /** @param array<string, mixed> $spec */
+    private function coerceValue(mixed $raw, string $type, array $spec): mixed
     {
         return match ($type) {
             'integer' => $this->toInt($raw),
             'number' => $this->toFloat($raw),
             'boolean' => $this->toBool($raw),
-            'array' => \is_array($raw) ? $raw : throw new \InvalidArgumentException('expected an array'),
+            'object' => $this->toObject($raw),
+            'array' => $this->toArray($raw, $spec),
             default => \is_scalar($raw) ? (string) $raw : throw new \InvalidArgumentException('expected a string'),
         };
+    }
+
+    /**
+     * Transport an object without changing its property values or interpreting its strings.
+     *
+     * The CLI supplies a JSON object; HTTP already decoded its body into associative arrays.
+     * Nested validation remains the declared handler's responsibility, as for other compound input.
+     *
+     * @return array<int|string, mixed>
+     */
+    private function toObject(mixed $raw): array
+    {
+        if (\is_string($raw)) {
+            try {
+                // Inspect the JSON shape before associative decoding loses {} versus [].
+                if (!json_decode($raw, false, 64, JSON_THROW_ON_ERROR) instanceof \stdClass) {
+                    throw new \InvalidArgumentException('expected a JSON object');
+                }
+                return json_decode($raw, true, 64, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                throw new \InvalidArgumentException('expected a valid JSON object');
+            }
+        }
+        // HTTP's existing associative decode represents an empty object as [].
+        if (\is_array($raw) && ($raw === [] || !array_is_list($raw))) {
+            return $raw;
+        }
+        throw new \InvalidArgumentException('expected an object');
+    }
+
+    /**
+     * Decode repeated CLI object flags only when the item schema explicitly declares objects.
+     *
+     * @param array<string, mixed> $spec
+     *
+     * @return array<int|string, mixed>
+     */
+    private function toArray(mixed $raw, array $spec): array
+    {
+        if (!\is_array($raw)) {
+            throw new \InvalidArgumentException('expected an array');
+        }
+        if (!\is_array($spec['items'] ?? null) || ($spec['items']['type'] ?? null) !== 'object') {
+            return $raw;
+        }
+        $out = [];
+        foreach ($raw as $key => $item) {
+            try {
+                $out[$key] = $this->toObject($item);
+            } catch (\InvalidArgumentException $error) {
+                throw new \InvalidArgumentException("item '{$key}': " . $error->getMessage());
+            }
+        }
+        return $out;
     }
 
     private function toInt(mixed $raw): int

@@ -1,6 +1,68 @@
 # Changelog
 
 
+## [0.20.0](https://github.com/getmilpa/console/compare/v0.21.0...v0.20.0) (2026-09-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* consent for a call is now decided from `Operation::ceilingForCall()`. A declared descent with no valid certificate no longer lowers the ceiling, so operations that relied on a descent to avoid asking will ask until their descent is certified. Requires milpa/command >=0.10.
+* a projected tool's name is now normalised — anything outside `[a-zA-Z0-9_-]` becomes `_`, and names longer than 64 characters are truncated. An operation named `plugins.list` registers as the tool `plugins_list`.
+* `CliRunner`'s default output is now text for a person, not JSON. A host that wants JSON declares it: `new CliRunner(renderer: new JsonCliRenderer())`. That JSON was never a decision — `json_encode` was the only path a non-scalar result had.
+
+### Features
+
+* a renderer materialises what a projector produced ([6a9b1ed](https://github.com/getmilpa/console/commit/6a9b1ed8446edd1b44125b47fb267c0d679c8350))
+* **authority:** preserve caller scopes across operation surfaces ([88bd8b2](https://github.com/getmilpa/console/commit/88bd8b2220cc4621e1abbe4f95dd832260dca5d9))
+* consent is decided for the call, not for the operation in the abstract ([#28](https://github.com/getmilpa/console/issues/28)) ([6bc662f](https://github.com/getmilpa/console/commit/6bc662fb9b8004024d8da927519bec863c9c0e7e))
+* decide consent from the operation, so a descent's certificate is consulted ([#41](https://github.com/getmilpa/console/issues/41)) ([c42fdea](https://github.com/getmilpa/console/commit/c42fdead3d304c674fdb5cd798ce62646037f194))
+* declare every event this package dispatches to the dispatcher ([#61](https://github.com/getmilpa/console/issues/61)) ([4248c6c](https://github.com/getmilpa/console/commit/4248c6cc4988f2b1d16bb732e6cff55c7cef438c))
+* el runner lleva el contexto de invocacion hasta el handler ([fc24060](https://github.com/getmilpa/console/commit/fc2406018255136441a853ac9d2cc7713017a652))
+* **events:** OperationExecutedEvent carries the InvocationContext so an execution can be attributed ([#51](https://github.com/getmilpa/console/issues/51)) ([110aab7](https://github.com/getmilpa/console/commit/110aab7126fd06b990f6d2899fd87823bca43c06))
+* **http:** a persistent ConfirmTokenStore so the confirm gate completes over stateless HTTP ([#49](https://github.com/getmilpa/console/issues/49)) ([6543b28](https://github.com/getmilpa/console/commit/6543b28618a084babdfd4d5544d7ff0720d36058))
+* milpa/console — the projection layer ([ddf6328](https://github.com/getmilpa/console/commit/ddf63281d88102a0d1b2ffdcd837197d276715c6))
+* name the events holder in the manifest so a host reads it without constructing an emitter ([#63](https://github.com/getmilpa/console/issues/63)) ([fb6c222](https://github.com/getmilpa/console/commit/fb6c222297810740d97d25f48e895309342a1b00))
+* normalise MCP tool names to what the spec accepts ([e172915](https://github.com/getmilpa/console/commit/e172915d5f4b4476ff5a8e8d4ad0ce5bcc93defa))
+* OperationRunner — one place where an operation runs, and one place a hook sees it ([7402a51](https://github.com/getmilpa/console/commit/7402a51181c2945cf6a5a3afaa0df074b9e38f53))
+* satisfy a consent demand by any covering proof-backed grant (satisfiedBy) ([#55](https://github.com/getmilpa/console/issues/55)) ([f986aa2](https://github.com/getmilpa/console/commit/f986aa27a43b1a8d8416dd21da21853e5df2d423))
+* the gate registers the granted authorization for the run to consume ([#47](https://github.com/getmilpa/console/issues/47)) ([408441d](https://github.com/getmilpa/console/commit/408441d0313815de5a65c5a611b14e414e352365))
+* the HTTP projector lands here, with identity behind an interface ([a03502e](https://github.com/getmilpa/console/commit/a03502ee16248858fa206d694981e80ebe0c6fe1))
+* the TUI surface stops being a screen you read ([af3625d](https://github.com/getmilpa/console/commit/af3625d27978db46aa1c2bc4cbcb7f28c51a4d98))
+* transport declared object inputs through CLI and HTTP ([#76](https://github.com/getmilpa/console/issues/76); Greenhouse 0819) ([d70b99b](https://github.com/getmilpa/console/commit/d70b99bf4142deb5dc846014f10c7230aec6dd98))
+* **tui:** the terminal dashboard says its words in English, and the host can replace them ([#57](https://github.com/getmilpa/console/issues/57)) ([36768ee](https://github.com/getmilpa/console/commit/36768eec35f324c11dd47b3855ae88b46fd087b2))
+* wire rule S2 — consent derived from the ceiling ([#25](https://github.com/getmilpa/console/issues/25)) ([26ed260](https://github.com/getmilpa/console/commit/26ed260c87bca2a20089cf4c37d8cba3cf86fc44))
+
+
+### Bug Fixes
+
+* accept milpa/plugin ^0.11 so the family can move past 0.10 ([#23](https://github.com/getmilpa/console/issues/23)) ([ddb6639](https://github.com/getmilpa/console/commit/ddb66392202525ce301c0a19ca8f0fcea9d6c658))
+* certificates in this battery name themselves and carry a signature ([#43](https://github.com/getmilpa/console/issues/43)) ([afbb626](https://github.com/getmilpa/console/commit/afbb626a86457f388dcb85bc720eab9836f8bb16))
+* **cli:** what a human reads is English by default, starting with the first line ([#67](https://github.com/getmilpa/console/issues/67)) ([67a4d67](https://github.com/getmilpa/console/commit/67a4d6731551d3a3a5c018df83364081820fcc02))
+* console does not use milpa/live, and its TUI field rendered blank ([#65](https://github.com/getmilpa/console/issues/65)) ([c4c79b2](https://github.com/getmilpa/console/commit/c4c79b229a33164fceb903477469d3e59ae2c2f3))
+* **deps:** admite milpa/live-tui ^0.6 ([a7883f0](https://github.com/getmilpa/console/commit/a7883f08bbafce7acfb4e0b78885491717e39c6a))
+* **deps:** el pin de milpa/core deja de ser una jaula de un minor ([ca41421](https://github.com/getmilpa/console/commit/ca41421a906e712f0d576781ee53f338d18ef163))
+* **deps:** el rango de milpa/command admite 0.6 ([94f8bd6](https://github.com/getmilpa/console/commit/94f8bd65702353f430c556faf2f2a46a8dddc772))
+* **deps:** el rango de milpa/live-tui admite 0.7 ([b515123](https://github.com/getmilpa/console/commit/b51512332ebf01eb0b5a73fbd0674466a57897db))
+* **deps:** el rango de milpa/plugin admite 0.10 ([7b4399b](https://github.com/getmilpa/console/commit/7b4399b9db9ba718fc153a12753dd5e9efa9915c))
+* **deps:** publica el rango ensanchado de milpa/plugin ([3c7eb34](https://github.com/getmilpa/console/commit/3c7eb34a8d0ad69b43dbc0093f00eefcbabc4734))
+* **deps:** reach milpa/command ^0.7, where the ceiling grew a fifth dimension ([af5b307](https://github.com/getmilpa/console/commit/af5b307501c101f457016908eb54a770736d9d33))
+* every surface decides consent by the same rule, and one file decides it ([7a34ab7](https://github.com/getmilpa/console/commit/7a34ab757917d584a3883df288b01d9524d0fb73))
+* reject undeclared input in closed schemas ([#53](https://github.com/getmilpa/console/issues/53)) ([bc85b35](https://github.com/getmilpa/console/commit/bc85b35ce6b7a3898a7d68592a2d6eff5393fca6))
+* require milpa/plugin ^0.5 ([1872585](https://github.com/getmilpa/console/commit/18725850440e8d67ca39dfee303c79458ec83d41))
+* require milpa/plugin ^0.6 ([56dc871](https://github.com/getmilpa/console/commit/56dc871283d00f5487531b929f52a241d6450730))
+* **test:** the English guard was case-sensitive, and a probe caught it ([#70](https://github.com/getmilpa/console/issues/70)) ([44fc52e](https://github.com/getmilpa/console/commit/44fc52ee99258bab4b7702c49a9f79005b9ede29))
+* the --sign message says the fact the gate read ([#59](https://github.com/getmilpa/console/issues/59)) ([ed22b72](https://github.com/getmilpa/console/commit/ed22b72d228848810c4a7d18f17e3d4cb4da2981))
+* the descent battery leaves authority up, and a new case says why ([#45](https://github.com/getmilpa/console/issues/45)) ([1730f9e](https://github.com/getmilpa/console/commit/1730f9e52713b520cc358fee7f6d74e80071076b))
+* the HTTP policy contract now lives in milpa/command ([47b7bf1](https://github.com/getmilpa/console/commit/47b7bf168c3db7577f11dda14d52eec042699cc3))
+* **tui:** the operations screen takes its words from the host, and the guard that missed them decides by what precedes a string ([#72](https://github.com/getmilpa/console/issues/72)) ([c4a1ce3](https://github.com/getmilpa/console/commit/c4a1ce36bfeeedbc540c5a4b662b5bc4f241d738))
+* widen milpa/command and milpa/plugin pins to accept the 0.5/0.8 minors ([a5d9086](https://github.com/getmilpa/console/commit/a5d90868635f843732b408e827376e33c801c08e))
+* widen the milpa/live-tui pin to accept the 0.5 minor ([2756839](https://github.com/getmilpa/console/commit/2756839cc389175cea54208f22e3e246f8a84c9c))
+
+
+### Miscellaneous Chores
+
+* cut the first line at 0.1.0, not 1.0.0 ([b769e8f](https://github.com/getmilpa/console/commit/b769e8f8533bb784c501c72529f557a07c86200a))
+
 ## [0.21.0](https://github.com/getmilpa/console/compare/v0.20.0...v0.21.0) (2026-09-20)
 
 

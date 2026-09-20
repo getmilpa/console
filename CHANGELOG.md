@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.21.0](https://github.com/getmilpa/console/compare/v0.20.0...v0.21.0) (2026-09-20)
+
+
+### Features
+
+* transport declared object inputs through CLI and HTTP ([#76](https://github.com/getmilpa/console/issues/76); Greenhouse 0819) ([d70b99b](https://github.com/getmilpa/console/commit/d70b99bf4142deb5dc846014f10c7230aec6dd98))
+
 ## [0.20.0](https://github.com/getmilpa/console/compare/v0.18.4...v0.20.0) (2026-09-12)
 
 

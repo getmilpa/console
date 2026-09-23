@@ -46,8 +46,11 @@ use PHPUnit\Framework\TestCase;
  * entrance it had no test.
  *
  * @guards the replay ledger's location and the refusal when the app root is unknown
+ *
  * @fires   on every `--sign` that does not carry an injected authorizer
+ *
  * @refuses an app with no declared root — it cannot spend an authorization
+ *
  * @subject-in milpa/console
  */
 #[CoversClass(CliRunner::class)]

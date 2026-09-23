@@ -23,8 +23,11 @@ use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Console\Rendering\CliRenderer;
 use Milpa\Console\Rendering\PlainTextCliRenderer;
 use Milpa\Interfaces\Di\DIContainerInterface;
+use Milpa\Console\Identity\AuthorizationLedger;
+use Milpa\Plugin\Contracts\AppRoot;
 use Milpa\ToolRuntime\Identity\FileNonceLedger;
 use Milpa\ToolRuntime\Identity\GnupgSignatureVerifier;
+use Milpa\ToolRuntime\Identity\SignatureVerifier;
 use Milpa\ToolRuntime\Identity\GrantedAuthorization;
 use Milpa\ToolRuntime\Identity\OperationAuthorization;
 use Milpa\ToolRuntime\Identity\OperationAuthorizer;
@@ -71,6 +74,10 @@ final class CliRunner
         private readonly ?MilpaEventDispatcherInterface $dispatcher = null,
         private readonly ?\Closure $signerAuthority = null,
         private readonly ?ToolContext $callerAuthority = null,
+        // THE VERIFIER, for the same reason `$signer` is here: without it, the branch that composes
+        // the default authorizer — the one that decides WHERE replay protection is written — could
+        // only be exercised with a real key, so it was never exercised at all.
+        private readonly ?SignatureVerifier $verifier = null,
     ) {
     }
 
@@ -89,7 +96,7 @@ final class CliRunner
      *
      * @return GrantedAuthorization|int the verified receipt, or the refusal exit code
      */
-    private function authorizeBySignature(Operation $op, array $input, array $argv, callable $out): GrantedAuthorization|int
+    private function authorizeBySignature(Operation $op, array $input, array $argv, callable $out, DIContainerInterface $container): GrantedAuthorization|int
     {
         if (!\in_array('--sign', $argv, true)) {
             // SAY THE FACT THE GATE READ, not one the operation may never have declared: a read with no
@@ -124,10 +131,37 @@ final class CliRunner
 
         [$payload, $signature] = $signed;
 
-        $authorizer = $this->authorizer ?? new OperationAuthorizer(
-            new GnupgSignatureVerifier(),
-            new FileNonceLedger(\dirname(__DIR__, 2) . '/storage/authorizations'),
-        );
+        $authorizer = $this->authorizer;
+        if ($authorizer === null) {
+            // THE LEDGER LIVES WHERE THE APP LIVES, and this asked the FILE where it was instead.
+            //
+            // `dirname(__DIR__, 2)` is `platform/` from a checkout and `vendor/milpa/` from an
+            // installed app, so replay protection was being written INSIDE `vendor/` — measured
+            // landing at `vendor/milpa/storage/authorizations/<nonce>` on a real signed run
+            // (greenhouse evidence/0990). `rm -rf vendor && composer install` is the routine
+            // recovery of this ecosystem, and it wipes the one record that stops a still-fresh
+            // authorization from being presented twice. A guard whose state lives in the directory
+            // everyone treats as disposable stops guarding without saying so.
+            //
+            // So the app says where it lives, and if it does not, this REFUSES. Defaulting back to
+            // a path under this file would be the silent version of the same defect — «no pude
+            // leerlo» is a state, not a zero (greenhouse decisions/0312).
+            $root = $container->has(AppRoot::class) ? $container->get(AppRoot::class) : null;
+            if (! $root instanceof AppRoot || trim($root->path) === '') {
+                $out('✗ This app does not say where it lives, so an authorization cannot be spent.');
+                $out('');
+                $out('  The replay ledger has to be written somewhere this app owns. Register');
+                $out('  Milpa\\Plugin\\Contracts\\AppRoot in the container — `config/boot.php` does it');
+                $out('  in one line — or hand this runner an OperationAuthorizer of your own.');
+
+                return 1;
+            }
+
+            $authorizer = new OperationAuthorizer(
+                $this->verifier ?? new GnupgSignatureVerifier(),
+                new FileNonceLedger(AuthorizationLedger::under($root)),
+            );
+        }
 
         $verdict = $authorizer->authorize($op->name, $input, $host, $payload, $signature, $now);
         if (!$verdict->granted) {
@@ -228,7 +262,7 @@ final class CliRunner
             // `--yes` could be answered before knowing what the arguments were, because it never
             // referred to them. A signature is over the arguments, so there is nothing to sign
             // until they exist.
-            $authorized = $this->authorizeBySignature($op, $input, $argv, $out);
+            $authorized = $this->authorizeBySignature($op, $input, $argv, $out, $container);
             if (\is_int($authorized)) {
                 return $authorized;
             }

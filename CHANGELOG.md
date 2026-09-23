@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.21.1](https://github.com/getmilpa/console/compare/v0.21.0...v0.21.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* **identity:** the replay ledger lives where the app lives, not inside vendor/ ([#79](https://github.com/getmilpa/console/issues/79)) ([d8d3d43](https://github.com/getmilpa/console/commit/d8d3d43a47e87ca7123516f71c240988942ee2ad))
+
 ## [0.21.0](https://github.com/getmilpa/console/compare/v0.20.0...v0.21.0) (2026-09-20)
 
 

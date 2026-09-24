@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.21.2](https://github.com/getmilpa/console/compare/v0.21.1...v0.21.2) (2026-09-24)
+
+
+### Bug Fixes
+
+* **cli:** a property that asks for a list of objects can be typed ([#81](https://github.com/getmilpa/console/issues/81)) ([66b0239](https://github.com/getmilpa/console/commit/66b02397fb9ff86523a52992e39a2ce5feb7f429))
+
 ## [0.21.1](https://github.com/getmilpa/console/compare/v0.21.0...v0.21.1) (2026-09-23)
 
 

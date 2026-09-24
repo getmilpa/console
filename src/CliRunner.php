@@ -335,6 +335,30 @@ final class CliRunner
     }
 
     /**
+     * The elements of a flag value that is a JSON list, or null when it is not one.
+     *
+     * Only a LIST counts — a JSON object, a scalar or a malformed string is a single element, as it
+     * always was. The first character is checked before decoding so an ordinary value is never handed
+     * to the parser at all.
+     *
+     * @return list<mixed>|null
+     */
+    private static function jsonList(string $value): ?array
+    {
+        $trimmed = ltrim($value);
+        if ($trimmed === '' || $trimmed[0] !== '[') {
+            return null;
+        }
+        try {
+            $decoded = json_decode($trimmed, true, 64, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        return \is_array($decoded) && array_is_list($decoded) ? $decoded : null;
+    }
+
+    /**
      * Los tokens `--clave=valor` como bolsa cruda, consultando el esquema para saber qué se repite.
      *
      * Una bandera que aparece dos veces gana la última, SALVO que su propiedad esté declarada
@@ -350,7 +374,7 @@ final class CliRunner
      * @param list<string>         $argv
      * @param array<string, mixed> $inputSchema
      *
-     * @return array<string, string|list<string>>
+     * @return array<string, string|list<mixed>>
      */
     private function rawBag(array $argv, array $inputSchema = []): array
     {
@@ -366,9 +390,21 @@ final class CliRunner
             [$clave, $valor] = str_contains($cuerpo, '=') ? explode('=', $cuerpo, 2) : [$cuerpo, '1'];
 
             if (($propiedades[$clave]['type'] ?? null) === 'array') {
-                /** @var list<string> $previo */
+                /** @var list<mixed> $previo */
                 $previo = \is_array($bag[$clave] ?? null) ? $bag[$clave] : [];
-                $previo[] = $valor;
+                // A LIST OF OBJECTS HAS NO OTHER SPELLING ON A TERMINAL (greenhouse evidence/0995). The
+                // convention here is one flag per element — `--tag=a --tag=b` — and that can only carry
+                // scalars. So `screen:declare --columns='[{"key":"title","label":"Title"}]'` arrived as a
+                // list of ONE STRING, the coercer took it as an array, and the screen rendered with no
+                // columns: an operation whose schema asks for objects was inexpressible from the one surface
+                // a human types into. A value that is itself a JSON list is taken as its elements; every
+                // other value is still one element, so a repeated scalar flag behaves exactly as before.
+                $lista = self::jsonList($valor);
+                if ($lista !== null) {
+                    array_push($previo, ...$lista);
+                } else {
+                    $previo[] = $valor;
+                }
                 $bag[$clave] = $previo;
 
                 continue;

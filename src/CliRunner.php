@@ -78,6 +78,9 @@ final class CliRunner
         // the default authorizer — the one that decides WHERE replay protection is written — could
         // only be exercised with a real key, so it was never exercised at all.
         private readonly ?SignatureVerifier $verifier = null,
+        // THE BOOK OF SEQUENCE RECEIPTS (greenhouse decisions/0500). Null keeps the door exactly as
+        // it was: every call that needs a signature asks for one, and a signed call leaves nothing.
+        private readonly ?SequenceReceipts $receipts = null,
     ) {
     }
 
@@ -257,7 +260,52 @@ final class CliRunner
             return 1;
         }
         $context = null;
-        if (Consent::demanded($op, $input) || \in_array('--sign', $argv, true)) {
+        $granted = null;
+        $cited = null;
+        $signing = \in_array('--sign', $argv, true);
+        $sequence = $this->receipts !== null ? $op->sequenceFor($input) : null;
+        $standing = !$signing && $sequence !== null ? $this->receipts->standing($sequence) : null;
+        if ($sequence !== null && $standing !== null) {
+            // A CALL THAT CONTINUES A SIGNED SEQUENCE CITES ITS RECEIPT (greenhouse decisions/0458,
+            // 0500). The first call paid the ceremony; this one runs under it — re-verified here,
+            // bound to THIS sequence, and judged against who the signer is today. If any of that
+            // fails it refuses: a sequence opened by a seat never widens to the terminal's default
+            // because its receipt stopped holding.
+            $cited = $this->citeReceipt($op, $sequence, $standing);
+            if (\is_string($cited)) {
+                $out('✗ This call continues a signed sequence, and its receipt no longer holds: ' . $cited . '.');
+                $out('  Nothing ran. Re-run with --sign to open the sequence again under a signature of today.');
+
+                return 1;
+            }
+            try {
+                $authority = $this->signerAuthority?->__invoke($cited['signer']) ?? $authority;
+            } catch (\Throwable $error) {
+                foreach ($this->renderer->presentError($error->getMessage()) as $line) {
+                    $out($line);
+                }
+
+                return 1;
+            }
+            if ($authority !== null) {
+                $scope = $policy->authorizeCall($authority, $tool, $input);
+                if (!$scope->allowed) {
+                    foreach ($this->renderer->presentError((string) $scope->reason) as $line) {
+                        $out($line);
+                    }
+
+                    return 1;
+                }
+            }
+            $context = new InvocationContext(
+                actor: 'key:' . $cited['signer']->fingerprint,
+                verified: true,
+                channel: 'cli',
+                authorizationId: $cited['receipt'],
+            );
+            $out('✓ continuing under the signature of ' . $cited['signer']->principal() . ' (' . substr($cited['receipt'], 0, 19) . '…)');
+            $this->receipts->cited($sequence, $op->name, $cited['receipt']);
+        } elseif (Consent::demanded($op, $input) || $signing) {
             // The input has to be derived first now, which is the whole reason the order changed:
             // `--yes` could be answered before knowing what the arguments were, because it never
             // referred to them. A signature is over the arguments, so there is nothing to sign
@@ -297,6 +345,7 @@ final class CliRunner
             // Publish only after both checks passed: a refused caller must leave no usable grant.
             $out('✓ authorized by ' . $authorized->signer->principal());
             $container->registerService(GrantedAuthorization::class, $authorized);
+            $granted = $authorized;
         }
 
         // Por el runner y no a mano: es la única costura por la que pasan las cuatro superficies, y
@@ -306,18 +355,21 @@ final class CliRunner
             /** @var mixed $result */
             $result = (new OperationRunner($container, $this->dispatcher))->run($op, $input, 'cli', $context, $authority);
         } catch (OperationStoppedException $e) {
+            $this->settleReceipt($sequence, $op, $granted, $cited, null, $out);
             foreach ($this->renderer->presentError($e->getMessage()) as $linea) {
                 $out($linea);
             }
 
             return 1;
         } catch (\Throwable $e) {
+            $this->settleReceipt($sequence, $op, $granted, $cited, null, $out);
             foreach ($this->renderer->presentError($e->getMessage()) as $linea) {
                 $out($linea);
             }
 
             return 1;
         }
+        $this->settleReceipt($sequence, $op, $granted, $cited, $result, $out);
 
         // Un entero sigue siendo un CÓDIGO DE SALIDA y no un resultado que pintar: es la convención
         // con que un handler dice «ya reporté yo». Todo lo demás va al renderer, incluido `null` —
@@ -332,6 +384,80 @@ final class CliRunner
         }
 
         return $ok ? 0 : 1;
+    }
+
+    /**
+     * Whether the standing receipt authorizes THIS call to continue its sequence, re-checked now.
+     *
+     * Four ways to be wrong, each its own refusal (greenhouse decisions/0500): the bytes were
+     * altered or the key no longer signs (gpg answers no GOODSIG for an expired or revoked key); the
+     * stored fingerprint is not the live one; the payload signed another operation or another host;
+     * or the signed arguments name a DIFFERENT sequence — a receipt lifted from another session
+     * fails here with no extra machinery, because the binding was signed. Freshness and the nonce
+     * are not asked again: this is not the authorization of this call but the citation of the one
+     * that opened the sequence, and the book stops returning it when the sequence ends.
+     *
+     * @param array<string, mixed> $standing
+     *
+     * @return array{signer: VerifiedSigner, receipt: string}|string the signer and receipt id, or why not
+     */
+    private function citeReceipt(Operation $op, string $sequence, array $standing): array|string
+    {
+        $payload = $standing['payload'] ?? null;
+        $signature = $standing['signature'] ?? null;
+        if (!\is_string($payload) || $payload === '' || !\is_string($signature) || $signature === '') {
+            return 'the kept receipt carries no signed bytes to re-verify';
+        }
+        $signer = ($this->verifier ?? new GnupgSignatureVerifier())->verify($payload, $signature);
+        if ($signer === null) {
+            return 'its signature does not verify — the receipt was altered, or the key expired or was revoked';
+        }
+        if (($standing['fingerprint'] ?? null) !== $signer->fingerprint) {
+            return 'the key it names is not the key that signed it';
+        }
+        $authorization = OperationAuthorization::fromCanonical($payload);
+        if ($authorization === null) {
+            return 'the signed payload is not an operation authorization';
+        }
+        if ($authorization->operation !== $op->name) {
+            return "it signed '{$authorization->operation}', not '{$op->name}'";
+        }
+        $host = gethostname() ?: 'unknown-host';
+        if ($authorization->host !== $host) {
+            return "it was signed on host '{$authorization->host}', not on this one";
+        }
+        if ($op->sequenceFor($authorization->arguments) !== $sequence) {
+            return "it was signed for a different sequence than «{$sequence}»";
+        }
+
+        return ['signer' => $signer, 'receipt' => 'sha256:' . hash('sha256', $payload)];
+    }
+
+    /**
+     * Tell the book how a call that continues a sequence ended: keep the signature a signed call
+     * ran under, or let a cited one say whether the sequence is over.
+     *
+     * After the call and not before, because the handler is what creates the sequence and its
+     * result is what says whether the sequence ended. A book that cannot keep the receipt is said
+     * out loud and fails closed: the next call simply asks for --sign.
+     *
+     * @param array{signer: VerifiedSigner, receipt: string}|string|null $cited
+     * @param callable(string): void                                     $out
+     */
+    private function settleReceipt(?string $sequence, Operation $op, ?GrantedAuthorization $granted, array|string|null $cited, mixed $result, callable $out): void
+    {
+        if ($sequence === null || $this->receipts === null) {
+            return;
+        }
+        try {
+            if ($granted !== null) {
+                $this->receipts->record($sequence, $op->name, $granted, $result);
+            } elseif (\is_array($cited)) {
+                $this->receipts->settled($sequence, $op->name, $result);
+            }
+        } catch (\Throwable $error) {
+            $out('  (the signature could not be kept for this sequence — the next call will ask for --sign: ' . $error->getMessage() . ')');
+        }
     }
 
     /**

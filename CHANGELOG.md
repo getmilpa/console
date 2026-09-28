@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.22.0](https://github.com/getmilpa/console/compare/v0.21.2...v0.22.0) (2026-09-28)
+
+
+### Features
+
+* **cli:** a call that continues a signed sequence cites its receipt ([#83](https://github.com/getmilpa/console/issues/83)) ([3b34912](https://github.com/getmilpa/console/commit/3b34912b977b9cac9cb98d866a8d58242314181f))
+
 ## [0.21.2](https://github.com/getmilpa/console/compare/v0.21.1...v0.21.2) (2026-09-24)
 
 

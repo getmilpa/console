@@ -229,6 +229,83 @@ final class HttpProjectorTest extends TestCase
         self::assertSame(404, $projector->handle($request)->getStatusCode());
     }
 
+    /**
+     * A handler that throws answers a 500 that carries NO part of the exception's message.
+     *
+     * Measured downstream (app-docentes ST-0013 / S-0031): with the database down, the 500 body was the
+     * driver's own text — host, port, SQLSTATE — handed to whoever called. The rule is the one
+     * `milpa/runtime`'s ExceptionMiddleware already keeps (greenhouse decisions/0215): the message and
+     * the trace go to the log, joined to the response by a reference the body carries.
+     */
+    public function testAThrowingHandlerAnswers500WithoutTheExceptionMessage(): void
+    {
+        $projector = $this->projector($this->throwingOperation());
+
+        $response = $projector->handle($this->matched($projector, 'GET', '/explode', ''));
+        $raw = (string) $response->getBody();
+
+        self::assertSame(500, $response->getStatusCode());
+        self::assertStringNotContainsString('SQLSTATE', $raw, 'the exception message never reaches the client');
+        self::assertStringNotContainsString('db.internal', $raw);
+        $payload = json_decode($raw, true);
+        self::assertIsArray($payload);
+        self::assertFalse($payload['ok']);
+        self::assertSame('internal_error', $payload['error']);
+        self::assertMatchesRegularExpression('/^[0-9a-f]{16}$/', $payload['reference']);
+    }
+
+    /** The detail is not lost: it goes to the logger, under the reference the response carries. */
+    public function testTheDetailGoesToTheLoggerUnderTheReferenceTheResponseCarries(): void
+    {
+        $logger = new class () extends \Psr\Log\AbstractLogger {
+            /** @var list<array{level: mixed, context: array<string, mixed>}> */
+            public array $records = [];
+
+            public function log($level, \Stringable|string $message, array $context = []): void
+            {
+                $this->records[] = ['level' => $level, 'context' => $context];
+            }
+        };
+        $psr17 = new Psr17Factory();
+        $projector = new HttpProjector(
+            [$this->throwingOperation()],
+            $this->createMock(DIContainerInterface::class),
+            $psr17,
+            $psr17,
+            logger: $logger,
+        );
+
+        $response = $projector->handle($this->matched($projector, 'GET', '/explode', ''));
+        $payload = json_decode((string) $response->getBody(), true);
+        self::assertIsArray($payload);
+
+        self::assertCount(1, $logger->records);
+        self::assertSame('error', $logger->records[0]['level']);
+        self::assertSame($payload['reference'], $logger->records[0]['context']['reference']);
+        self::assertStringContainsString('SQLSTATE[08006]', $logger->records[0]['context']['message']);
+        self::assertInstanceOf(\RuntimeException::class, $logger->records[0]['context']['exception']);
+    }
+
+    private function throwingOperation(): Operation
+    {
+        return new Operation(
+            name: 'explode',
+            description: 'Throws with an internal detail',
+            handler: static function (): never {
+                throw new \RuntimeException('SQLSTATE[08006] connection to server at "db.internal", port 5432 failed');
+            },
+            inputSchema: ['type' => 'object'],
+            path: '/explode',
+            effects: new EffectProfile(
+                mutation: Mutation::None,
+                externality: Externality::None,
+                reversibility: Reversibility::NotApplicable,
+                authority: Authority::Read,
+                subject: Subject::None,
+            ),
+        );
+    }
+
     private function matched(HttpProjector $projector, string $method, string $path, string $body): ServerRequest
     {
         $route = null;

@@ -233,11 +233,12 @@ final class McpProjector implements SurfaceProjector
     {
         $this->withheld[$tool] = $reason;
 
-        // A fresh house registers no logger, so without this fallback the warning reached nobody and
-        // the withholding was silent after all. `error_log()` is the SAPI's own log — STDERR under
-        // `coa mcp`, which is where a stdio server may speak (STDOUT belongs to the protocol).
+        // A fresh house's kernel registers a NullLogger when the host passes none, so a warning sent
+        // there reached nobody and the withholding was silent after all (measured on `coa mcp`).
+        // `error_log()` is the SAPI's own log — STDERR under `coa mcp`, which is where a stdio
+        // server may speak (STDOUT belongs to the protocol).
         $logger = $container->has(LoggerInterface::class) ? $container->get(LoggerInterface::class) : null;
-        if ($logger instanceof LoggerInterface) {
+        if ($logger instanceof LoggerInterface && !$logger instanceof \Psr\Log\NullLogger) {
             $logger->warning($reason);
         } else {
             error_log($reason);

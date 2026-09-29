@@ -270,14 +270,22 @@ final class McpPermissionTest extends TestCase
         self::assertSame([], $this->ran);
     }
 
-    /** A fresh house has no logger in its container; the withholding must still be said somewhere. */
-    public function test_without_a_logger_the_withholding_goes_to_the_sapi_log(): void
+    /**
+     * A fresh house's kernel puts a NullLogger in the container when the host passes none; a
+     * warning sent there is silence. Both shapes of «no logger» must reach the SAPI log.
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('noLogger')]
+    public function test_without_a_real_logger_the_withholding_goes_to_the_sapi_log(bool $nullLogger): void
     {
+        $container = new DIContainer();
+        if ($nullLogger) {
+            $container->registerService(LoggerInterface::class, new NullLogger());
+        }
         $log = tempnam(sys_get_temp_dir(), 'withheld');
         $previous = ini_set('error_log', (string) $log);
 
         try {
-            $registry = $this->served([$this->permissionedRead()], new DIContainer());
+            $registry = $this->served([$this->permissionedRead()], $container);
         } finally {
             ini_set('error_log', (string) $previous);
         }
@@ -287,6 +295,12 @@ final class McpPermissionTest extends TestCase
         self::assertFalse($registry->has('grades_read'));
         self::assertStringContainsString('grades.read', $said);
         self::assertStringContainsString('school.grades:read', $said);
+    }
+
+    /** @return array<string, array{bool}> */
+    public static function noLogger(): array
+    {
+        return ['no logger at all' => [false], 'the kernel default NullLogger' => [true]];
     }
 
     public function test_a_scopes_typed_operation_never_asks_the_permission_policy(): void

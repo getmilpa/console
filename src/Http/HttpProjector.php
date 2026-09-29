@@ -36,6 +36,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamFactoryInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Proyecta operaciones a HTTP: una ruta por operación, y el controlador genérico al que apuntan.
@@ -95,6 +96,10 @@ final class HttpProjector implements SurfaceProjector
         // como colaborador es lo que permite verla, sustituirla y probarla sola.
         private readonly ?OperationHttpPolicy $policy = null,
         private readonly ?\Milpa\Interfaces\Event\MilpaEventDispatcherInterface $dispatcher = null,
+        // Where the detail of a failed operation goes, since it never goes to the client. Without one
+        // the detail goes to `error_log()`, the SAPI's own log: dropping it would trade a leak for a
+        // failure nobody can find the next day.
+        private readonly ?LoggerInterface $logger = null,
     ) {
         foreach ($operations as $op) {
             if ($op->supportsSurface('http')) {
@@ -233,7 +238,7 @@ final class HttpProjector implements SurfaceProjector
             // servidor — es un estado que impide correrla ahora.
             return $this->json(409, ['error' => $e->getMessage(), 'code' => 'MILPA_OPERATION_STOPPED']);
         } catch (\Throwable $e) {
-            return $this->json(500, ['error' => $e->getMessage()]);
+            return $this->failed($request, $op, $e);
         }
 
         return $this->json($op->mutating ? 201 : 200, $data);
@@ -344,6 +349,51 @@ final class HttpProjector implements SurfaceProjector
                 );
             }
         }
+    }
+
+    /**
+     * The 500 of an operation that threw: no part of the exception crosses to the client.
+     *
+     * It used to answer `{"error": $e->getMessage()}`, and a message is whatever the thrower wrote —
+     * measured downstream (app-docentes ST-0013), with the database down it was the driver's text:
+     * host, port, SQLSTATE. The rule is the one `milpa/runtime`'s ExceptionMiddleware keeps
+     * (greenhouse decisions/0215): the message and the trace go to the log, joined to the response by
+     * a random reference, and the body says only that it failed.
+     *
+     * It does NOT map exception types to statuses: a database that is down being a 503 is a decision
+     * the app makes — the runner already hands it the exception in `operation.executed`.
+     */
+    private function failed(ServerRequestInterface $request, Operation $op, \Throwable $e): ResponseInterface
+    {
+        // Random per failure: it names an OCCURRENCE, never the app, the route or the user.
+        $reference = bin2hex(random_bytes(8));
+
+        $context = [
+            'operation' => $op->name,
+            'class' => $e::class,
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'message' => $e->getMessage(),
+            'reference' => $reference,
+            'exception' => $e,
+            'method' => $request->getMethod(),
+            'path' => $request->getUri()->getPath(),
+        ];
+        if ($this->logger !== null) {
+            $this->logger->error('Operation {operation} failed: {class} at {file}:{line} — {message} [ref {reference}]', $context);
+        } else {
+            error_log(\sprintf(
+                'Operation %s failed: %s at %s:%d — %s [ref %s]',
+                $op->name,
+                $e::class,
+                $e->getFile(),
+                $e->getLine(),
+                $e->getMessage(),
+                $reference,
+            ));
+        }
+
+        return $this->json(500, ['ok' => false, 'error' => 'internal_error', 'reference' => $reference]);
     }
 
     private function json(int $status, mixed $data): ResponseInterface

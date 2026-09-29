@@ -282,4 +282,60 @@ final class SchemaCoercerTest extends TestCase
     {
         $this->assertSame([], (new SchemaCoercer())->coerce([], ['lo' => 'que sea']));
     }
+
+    /**
+     * A declared list of JSON types keeps an HTTP-decoded value as itself (greenhouse evidence/1059).
+     *
+     * Read as the single-type fallback, `["string", …, "object"]` was `string`: a JSON `true` became
+     * `"1"`, `12` became `"12"` and an object was refused before the operation ever saw it.
+     */
+    public function testADeclaredTypeListKeepsDecodedJsonValuesAsThemselves(): void
+    {
+        $schema = ['type' => 'object', 'properties' => [
+            'value' => ['type' => ['string', 'integer', 'number', 'boolean', 'array', 'object', 'null']],
+        ]];
+
+        foreach ([true, false, 12, 1.5, null, ['maxTurns' => 3], ['a', 'b'], [], 'Answer briefly.'] as $decoded) {
+            self::assertSame(['value' => $decoded], $this->coercer->coerce($schema, ['value' => $decoded]));
+        }
+    }
+
+    /** Text stays text when the list admits strings: argv has no other spelling, the operation reads it. */
+    public function testADeclaredTypeListKeepsTextAsTextWhenItAdmitsStrings(): void
+    {
+        $schema = ['type' => 'object', 'properties' => ['value' => ['type' => ['string', 'integer', 'boolean']]]];
+
+        self::assertSame(['value' => 'true'], $this->coercer->coerce($schema, ['value' => 'true']));
+        self::assertSame(['value' => '49152'], $this->coercer->coerce($schema, ['value' => '49152']));
+    }
+
+    /** Without strings on the list, text is read as the first listed type that takes it. */
+    public function testADeclaredTypeListWithoutStringsCoercesTextToTheFirstTypeThatTakesIt(): void
+    {
+        $schema = ['type' => 'object', 'properties' => ['value' => ['type' => ['integer', 'boolean']]]];
+
+        self::assertSame(['value' => 7], $this->coercer->coerce($schema, ['value' => '7']));
+        self::assertSame(['value' => true], $this->coercer->coerce($schema, ['value' => 'true']));
+    }
+
+    /** A value of a type the list does not name is refused, with the list in the error. */
+    public function testADeclaredTypeListRefusesAValueOfAnotherType(): void
+    {
+        $schema = ['type' => 'object', 'properties' => ['value' => ['type' => ['integer', 'boolean']]]];
+
+        try {
+            $this->coercer->coerce($schema, ['value' => ['maxTurns' => 3]]);
+            self::fail('an object is not an integer or a boolean');
+        } catch (SchemaCoercionException $e) {
+            self::assertSame(["field 'value': expected one of: integer, boolean"], $e->errors);
+        }
+    }
+
+    /** The single-type reading is untouched: a property with no type still takes text. */
+    public function testAPropertyWithNoTypeStillReadsAsText(): void
+    {
+        $schema = ['type' => 'object', 'properties' => ['value' => ['description' => 'no type']]];
+
+        self::assertSame(['value' => '1'], $this->coercer->coerce($schema, ['value' => true]));
+    }
 }

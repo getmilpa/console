@@ -138,6 +138,33 @@ final class HttpProjectorTest extends TestCase
         self::assertSame(['id' => 1, 'title' => 'Hi', 'body' => 'Yo'], json_decode((string) $response->getBody(), true));
     }
 
+    /**
+     * A property declaring a LIST of JSON types hands the handler the decoded value itself (greenhouse
+     * evidence/1059): the JSON `true` a `config:set`-shaped door receives is `true`, not `"1"`, and an
+     * object is an object instead of a 422.
+     */
+    public function testADeclaredTypeListReachesTheHandlerAsTheDecodedValue(): void
+    {
+        $op = new Operation(
+            name: 'set_value',
+            description: 'Echo the value it received',
+            handler: static fn (array $i): array => ['received' => $i['value'], 'type' => get_debug_type($i['value'])],
+            inputSchema: ['type' => 'object', 'properties' => [
+                'value' => ['type' => ['string', 'integer', 'number', 'boolean', 'array', 'object', 'null']],
+            ], 'required' => ['value']],
+            path: '/value',
+            effects: EffectProfile::readOnly(),
+        );
+        $projector = $this->projector($op);
+
+        foreach (['true' => 'bool', '12' => 'int', '"Answer briefly."' => 'string', '{"maxTurns":3}' => 'array'] as $json => $type) {
+            $response = $projector->handle($this->matched($projector, 'GET', '/value', '{"value":' . (string) $json . '}'));
+
+            self::assertSame(200, $response->getStatusCode(), (string) $json);
+            self::assertSame(['received' => json_decode((string) $json, true), 'type' => $type], json_decode((string) $response->getBody(), true));
+        }
+    }
+
     public function testInvalidBodyReturns422(): void
     {
         $projector = $this->projector($this->createPostOperation());

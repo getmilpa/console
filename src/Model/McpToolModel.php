@@ -40,6 +40,9 @@ final readonly class McpToolModel implements SurfaceModel
      *                                                                 por `OperationRunner` — que es donde viven
      *                                                                 los ganchos de operación. Sin ella cae al
      *                                                                 handler directo, como antes.
+     * @param string|null                                $permission   the permission key the operation is typed by;
+     *                                                                 the materializer serves such a tool only behind an
+     *                                                                 {@see \Milpa\Console\OperationMcpPolicy}
      */
     public function __construct(
         public string $name,
@@ -52,6 +55,7 @@ final readonly class McpToolModel implements SurfaceModel
         public ?string $version = null,
         public ?array $outputSchema = null,
         public ?Operation $operation = null,
+        public ?string $permission = null,
     ) {
     }
 
@@ -78,6 +82,7 @@ final readonly class McpToolModel implements SurfaceModel
             'outputSchema' => $this->outputSchema,
             'handler' => \is_array($this->handler) ? implode('::', $this->handler) : 'closure',
             'scopes' => $this->scopes,
+            'permission' => $this->permission,
             'mutating' => $this->mutating,
             'requiresConfirmation' => $this->requiresConfirmation,
             'version' => $this->version,

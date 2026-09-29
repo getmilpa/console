@@ -21,6 +21,7 @@ use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Interfaces\Di\DIContainerInterface;
 use Milpa\Interfaces\Tooling\ToolRegistryInterface;
 use Milpa\ValueObjects\Tooling\ToolOptions;
+use Psr\Log\LoggerInterface;
 
 /**
  * Projects Operations to the MCP surface by registering each into the tool registry. Because atoms
@@ -48,6 +49,9 @@ use Milpa\ValueObjects\Tooling\ToolOptions;
  */
 final class McpProjector implements SurfaceProjector
 {
+    /** @var array<string, string> tool name => why it was not served */
+    private array $withheld = [];
+
     /**
      * El despachador es opcional y viaja al {@see OperationRunner} que materializa cada herramienta:
      * con él, una operación llamada por un agente emite los mismos eventos que si la hubieran corrido
@@ -108,7 +112,21 @@ final class McpProjector implements SurfaceProjector
             version: $op->version,
             outputSchema: $op->outputSchema,
             operation: $op,
+            permission: $op->permission,
         );
+    }
+
+    /**
+     * The tools this projector refused to serve, by tool name, with the reason.
+     *
+     * A permission-typed operation is served only behind an {@see OperationMcpPolicy}; without one
+     * it lands here (and in a warning on the container's logger) instead of being served unjudged.
+     *
+     * @return array<string, string>
+     */
+    public function withheld(): array
+    {
+        return $this->withheld;
     }
 
     /**
@@ -121,17 +139,30 @@ final class McpProjector implements SurfaceProjector
      */
     public function materialize(McpToolModel $model, ToolRegistryInterface $registry, DIContainerInterface $container): void
     {
-        if ($registry instanceof \Milpa\ToolRuntime\ToolRegistry && $container->has(\Milpa\ToolRuntime\Contracts\CallPolicy::class)) {
-            $policy = $container->get(\Milpa\ToolRuntime\Contracts\CallPolicy::class);
-            if ($policy instanceof \Milpa\ToolRuntime\Contracts\CallPolicy) {
-                $registry->getPolicyGate()->setCallPolicy($policy);
-            }
+        $host = $container->has(\Milpa\ToolRuntime\Contracts\CallPolicy::class) ? $container->get(\Milpa\ToolRuntime\Contracts\CallPolicy::class) : null;
+        $host = $host instanceof \Milpa\ToolRuntime\Contracts\CallPolicy ? $host : null;
+        $gate = $registry instanceof \Milpa\ToolRuntime\ToolRegistry ? $registry->getPolicyGate() : null;
+        $installed = $gate?->getCallPolicy();
+        if ($installed instanceof PermissionCallPolicy) {
+            // A permission-typed tool was materialized on this registry before: its judge stays in
+            // the gate, and the host's policy is refreshed behind it instead of replacing it.
+            $installed->deferTo($host);
+        } elseif ($host !== null) {
+            $gate?->setCallPolicy($host);
         }
+
+        $callable = $model->permission !== null
+            ? $this->guarded($model, $container, $gate)
+            : $this->callableFrom($model, $container);
+        if ($callable === null) {
+            return;
+        }
+
         $registry->register(
             $model->name,
             $model->description,
             $model->inputSchema,
-            $this->callableFrom($model, $container),
+            $callable,
             new ToolOptions(
                 scopes: $model->scopes,
                 mutating: $model->mutating,
@@ -140,6 +171,72 @@ final class McpProjector implements SurfaceProjector
                 outputSchema: $model->outputSchema,
             ),
         );
+    }
+
+    /**
+     * Wraps a permission-typed tool in the host's {@see OperationMcpPolicy}, or withholds it.
+     *
+     * Up to 0.22.1 the permission was dropped here: only `scopes` reached the registry, so the
+     * PolicyGate saw a tool with no authority declared and served it to every caller. Withholding
+     * is the fallback, never silence: the tool is not registered, {@see self::withheld()} names it
+     * and the container's logger (if any) says why.
+     *
+     * When the registry is tool-runtime's, the judge is installed in its PolicyGate
+     * ({@see PermissionCallPolicy}), so the call is refused at authorization — before consent and
+     * before any `tool.executing` listener. The callable is guarded as well, as a second line.
+     *
+     * @return PermissionGuardedHandler|null null when withheld
+     */
+    private function guarded(McpToolModel $model, DIContainerInterface $container, ?\Milpa\ToolRuntime\PolicyGate $gate): ?PermissionGuardedHandler
+    {
+        $operation = $model->operation;
+        if ($operation === null) {
+            $this->withhold($model->name, \sprintf(
+                'Tool «%s» requires the permission «%s» but carries no operation to judge it against; it is not served over MCP.',
+                $model->name,
+                $model->permission,
+            ), $container);
+
+            return null;
+        }
+
+        $policy = $container->has(OperationMcpPolicy::class) ? $container->get(OperationMcpPolicy::class) : null;
+        if (!$policy instanceof OperationMcpPolicy) {
+            $this->withhold($model->name, \sprintf(
+                'Operation «%s» requires the permission «%s» and this host wired no %s; it is not served over MCP. '
+                . 'Register a policy that resolves permissions, or type the operation by scopes.',
+                $operation->name,
+                $model->permission,
+                OperationMcpPolicy::class,
+            ), $container);
+
+            return null;
+        }
+
+        if ($gate !== null) {
+            $installed = $gate->getCallPolicy();
+            if (!$installed instanceof PermissionCallPolicy) {
+                $installed = new PermissionCallPolicy($policy, $installed);
+                $gate->setCallPolicy($installed);
+            }
+            $installed->guard($model->name, $operation);
+        }
+
+        return new PermissionGuardedHandler(
+            $policy,
+            $operation,
+            new OperationToolHandler(new OperationRunner($container, $this->dispatcher), $operation),
+        );
+    }
+
+    private function withhold(string $tool, string $reason, DIContainerInterface $container): void
+    {
+        $this->withheld[$tool] = $reason;
+
+        $logger = $container->has(LoggerInterface::class) ? $container->get(LoggerInterface::class) : null;
+        if ($logger instanceof LoggerInterface) {
+            $logger->warning($reason);
+        }
     }
 
     /**

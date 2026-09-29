@@ -270,6 +270,25 @@ final class McpPermissionTest extends TestCase
         self::assertSame([], $this->ran);
     }
 
+    /** A fresh house has no logger in its container; the withholding must still be said somewhere. */
+    public function test_without_a_logger_the_withholding_goes_to_the_sapi_log(): void
+    {
+        $log = tempnam(sys_get_temp_dir(), 'withheld');
+        $previous = ini_set('error_log', (string) $log);
+
+        try {
+            $registry = $this->served([$this->permissionedRead()], new DIContainer());
+        } finally {
+            ini_set('error_log', (string) $previous);
+        }
+
+        $said = (string) file_get_contents((string) $log);
+        @unlink((string) $log);
+        self::assertFalse($registry->has('grades_read'));
+        self::assertStringContainsString('grades.read', $said);
+        self::assertStringContainsString('school.grades:read', $said);
+    }
+
     public function test_a_scopes_typed_operation_never_asks_the_permission_policy(): void
     {
         $judge = new JudgeDouble(allow: false);

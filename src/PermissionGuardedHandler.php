@@ -21,7 +21,7 @@ use Milpa\ToolRuntime\ToolResult;
 
 /**
  * The callable an MCP registry invokes for a permission-typed operation: it asks the
- * {@see OperationMcpPolicy} about this caller and this call, and only then runs the operation.
+ * {@see OperationPermissionPolicy} about this caller and this call, and only then runs the operation.
  *
  * It is the second line, not the first: {@see PermissionCallPolicy} judges the call in the
  * PolicyGate, before consent and before any `tool.executing` listener. This one stays on the
@@ -34,7 +34,7 @@ final readonly class PermissionGuardedHandler implements ContextualToolHandler
 {
     /** @param ContextualToolHandler $next the operation's own handler, run only for an admitted caller */
     public function __construct(
-        private OperationMcpPolicy $policy,
+        private OperationPermissionPolicy $policy,
         private Operation $operation,
         private ContextualToolHandler $next,
     ) {

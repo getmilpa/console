@@ -119,7 +119,7 @@ final class McpProjector implements SurfaceProjector
     /**
      * The tools this projector refused to serve, by tool name, with the reason.
      *
-     * A permission-typed operation is served only behind an {@see OperationMcpPolicy}; without one
+     * A permission-typed operation is served only behind an {@see OperationPermissionPolicy}; without one
      * it lands here (and in a warning on the container's logger) instead of being served unjudged.
      *
      * @return array<string, string>
@@ -174,7 +174,7 @@ final class McpProjector implements SurfaceProjector
     }
 
     /**
-     * Wraps a permission-typed tool in the host's {@see OperationMcpPolicy}, or withholds it.
+     * Wraps a permission-typed tool in the host's {@see OperationPermissionPolicy}, or withholds it.
      *
      * Up to 0.22.1 the permission was dropped here: only `scopes` reached the registry, so the
      * PolicyGate saw a tool with no authority declared and served it to every caller. Withholding
@@ -200,14 +200,14 @@ final class McpProjector implements SurfaceProjector
             return null;
         }
 
-        $policy = $container->has(OperationMcpPolicy::class) ? $container->get(OperationMcpPolicy::class) : null;
-        if (!$policy instanceof OperationMcpPolicy) {
+        $policy = $container->has(OperationPermissionPolicy::class) ? $container->get(OperationPermissionPolicy::class) : null;
+        if (!$policy instanceof OperationPermissionPolicy) {
             $this->withhold($model->name, \sprintf(
                 'Operation «%s» requires the permission «%s» and this host wired no %s; it is not served over MCP. '
                 . 'Register a policy that resolves permissions, or type the operation by scopes.',
                 $operation->name,
                 $model->permission,
-                OperationMcpPolicy::class,
+                OperationPermissionPolicy::class,
             ), $container);
 
             return null;

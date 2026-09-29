@@ -19,6 +19,7 @@ use Milpa\Command\InvocationContext;
 use Milpa\ToolRuntime\Contracts\ToolContext;
 use Milpa\ToolRuntime\Identity\VerifiedSigner;
 use Milpa\ToolRuntime\PolicyGate;
+use Milpa\ToolRuntime\Policy\AuthorizationResult;
 use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Console\Rendering\CliRenderer;
 use Milpa\Console\Rendering\PlainTextCliRenderer;
@@ -252,7 +253,7 @@ final class CliRunner
             scopes: $op->scopes,
             mutating: $op->mutating,
         );
-        $admission = $policy->authorizeCall($authority ?? ToolContext::cli(), $tool, $input);
+        $admission = $this->admit($policy, $authority ?? ToolContext::cli(), $tool, $op, $input, $container);
         if (!$admission->allowed) {
             foreach ($this->renderer->presentError((string) $admission->reason) as $line) {
                 $out($line);
@@ -288,7 +289,7 @@ final class CliRunner
                 return 1;
             }
             if ($authority !== null) {
-                $scope = $policy->authorizeCall($authority, $tool, $input);
+                $scope = $this->admit($policy, $authority, $tool, $op, $input, $container);
                 if (!$scope->allowed) {
                     foreach ($this->renderer->presentError((string) $scope->reason) as $line) {
                         $out($line);
@@ -327,7 +328,7 @@ final class CliRunner
                 return 1;
             }
             if ($authority !== null) {
-                $scope = $policy->authorizeCall($authority, $tool, $input);
+                $scope = $this->admit($policy, $authority, $tool, $op, $input, $container);
                 if (!$scope->allowed) {
                     foreach ($this->renderer->presentError((string) $scope->reason) as $line) {
                         $out($line);
@@ -384,6 +385,40 @@ final class CliRunner
         }
 
         return $ok ? 0 : 1;
+    }
+
+    /**
+     * The authority verdict for one call: its scopes through the PolicyGate, then — for a finite
+     * caller — its permission through the host's {@see OperationPermissionPolicy}.
+     *
+     * Up to 0.22.1 only the scopes were judged here: the ToolDefinition carried `scopes` and never
+     * `permission`, so an enrolled seat signing a leg, or a scoped token, ran a permission-typed
+     * operation unjudged while a scopes-typed one was refused. A caller whose authority holds the
+     * terminal's wildcard (`*`: the local shell, or a signer the house recognizes as owner) is not
+     * asked — the wildcard already passes every scope here, and that trust model is unchanged. A
+     * finite caller is refused when there is no policy to judge it: not knowing is not allowing.
+     *
+     * @param array<string, mixed> $input
+     */
+    private function admit(PolicyGate $gate, ToolContext $caller, \Milpa\ToolRuntime\ToolDefinition $tool, Operation $op, array $input, DIContainerInterface $container): AuthorizationResult
+    {
+        $scope = $gate->authorizeCall($caller, $tool, $input);
+        if (!$scope->allowed || $op->permission === null || $caller->hasScope('*')) {
+            return $scope;
+        }
+
+        $judge = $container->has(OperationPermissionPolicy::class) ? $container->get(OperationPermissionPolicy::class) : null;
+        if (!$judge instanceof OperationPermissionPolicy) {
+            return AuthorizationResult::denied(\sprintf(
+                "Operation '%s' requires the permission '%s' and this host wired no %s to judge '%s'. Nothing ran.",
+                $op->name,
+                $op->permission,
+                OperationPermissionPolicy::class,
+                (string) $caller->principal,
+            ));
+        }
+
+        return PermissionCallPolicy::judge($judge, $op, $caller, $input);
     }
 
     /**

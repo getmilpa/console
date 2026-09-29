@@ -22,7 +22,7 @@ use Milpa\ToolRuntime\ToolDefinition;
 
 /**
  * The PolicyGate's call policy on a registry that serves permission-typed operations: it asks the
- * {@see OperationMcpPolicy} about each such tool, then defers to the host's own call policy.
+ * {@see OperationPermissionPolicy} about each such tool, then defers to the host's own call policy.
  *
  * It judges at AUTHORIZATION time, which is where the registry requires every check to have run:
  * before the confirm gate (a caller without the permission is refused, not asked to confirm) and
@@ -38,7 +38,7 @@ final class PermissionCallPolicy implements CallPolicy
     /** @var array<string, Operation> tool name => the permission-typed operation it serves */
     private array $guarded = [];
 
-    public function __construct(private readonly OperationMcpPolicy $judge, private ?CallPolicy $host = null)
+    public function __construct(private readonly OperationPermissionPolicy $judge, private ?CallPolicy $host = null)
     {
     }
 
@@ -80,7 +80,7 @@ final class PermissionCallPolicy implements CallPolicy
      *
      * @param array<string, mixed> $arguments
      */
-    public static function judge(OperationMcpPolicy $judge, Operation $operation, ToolContext $caller, array $arguments): AuthorizationResult
+    public static function judge(OperationPermissionPolicy $judge, Operation $operation, ToolContext $caller, array $arguments): AuthorizationResult
     {
         $permission = (string) $operation->permission;
 

@@ -17,7 +17,7 @@ namespace Milpa\Console\Tests;
 use Milpa\Command\Effect\EffectProfile;
 use Milpa\Command\Operation;
 use Milpa\Console\McpProjector;
-use Milpa\Console\OperationMcpPolicy;
+use Milpa\Console\OperationPermissionPolicy;
 use Milpa\Container\DIContainer;
 use Milpa\ToolRuntime\Contracts\ToolContext;
 use Milpa\ToolRuntime\Policy\AuthorizationResult;
@@ -82,10 +82,10 @@ final class McpPermissionTest extends TestCase
         return $registry;
     }
 
-    private function withPolicy(OperationMcpPolicy $policy): DIContainer
+    private function withPolicy(OperationPermissionPolicy $policy): DIContainer
     {
         $container = new DIContainer();
-        $container->registerService(OperationMcpPolicy::class, $policy);
+        $container->registerService(OperationPermissionPolicy::class, $policy);
 
         return $container;
     }
@@ -263,7 +263,7 @@ final class McpPermissionTest extends TestCase
         self::assertFalse($registry->has('grades_read'), 'no judge means no tool, never an unjudged one');
         self::assertTrue($registry->has('notes_read'), 'the rest of the catalogue is still served');
         self::assertSame(['grades_read'], array_keys($projector->withheld()));
-        self::assertStringContainsString(OperationMcpPolicy::class, $projector->withheld()['grades_read']);
+        self::assertStringContainsString(OperationPermissionPolicy::class, $projector->withheld()['grades_read']);
         self::assertSame(ToolResult::TOOL_NOT_FOUND, $registry->call('grades_read', [], $this->stdioCaller())->meta['code'] ?? null);
         self::assertCount(1, $logger->warnings, 'withholding is said out loud, never silent');
         self::assertStringContainsString('grades.read', $logger->warnings[0]);
@@ -341,31 +341,6 @@ final class McpPermissionTest extends TestCase
 
         self::assertFalse($registry->has('hand_read'), 'a permission with no operation to judge is not served');
         self::assertArrayHasKey('hand_read', $projector->withheld());
-    }
-}
-
-/** A judge whose verdict the test sets, and which remembers what it was asked. */
-final class JudgeDouble implements OperationMcpPolicy
-{
-    /** @var list<array{operation: Operation, caller: ToolContext, arguments: array<string, mixed>}> */
-    public array $asked = [];
-
-    public bool $throws = false;
-
-    public function __construct(public bool $allow)
-    {
-    }
-
-    public function enforce(Operation $op, ToolContext $caller, array $arguments): AuthorizationResult
-    {
-        $this->asked[] = ['operation' => $op, 'caller' => $caller, 'arguments' => $arguments];
-        if ($this->throws) {
-            throw new \RuntimeException('the permission store is unreachable');
-        }
-
-        return $this->allow
-            ? AuthorizationResult::allowed()
-            : AuthorizationResult::denied("Permission '{$op->permission}' is required.");
     }
 }
 

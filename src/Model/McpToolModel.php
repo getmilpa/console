@@ -42,7 +42,7 @@ final readonly class McpToolModel implements SurfaceModel
      *                                                                 handler directo, como antes.
      * @param string|null                                $permission   the permission key the operation is typed by;
      *                                                                 the materializer serves such a tool only behind an
-     *                                                                 {@see \Milpa\Console\OperationMcpPolicy}
+     *                                                                 {@see \Milpa\Console\OperationPermissionPolicy}
      */
     public function __construct(
         public string $name,

@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.22.1](https://github.com/getmilpa/console/compare/v0.22.0...v0.22.1) (2026-09-29)
+
+
+### Bug Fixes
+
+* **http:** a failed operation's 500 no longer carries the exception message ([#85](https://github.com/getmilpa/console/issues/85)) ([02d5639](https://github.com/getmilpa/console/commit/02d5639529890a1617bcbd8b4b8cb7e136f84692))
+
 ## [0.22.0](https://github.com/getmilpa/console/compare/v0.21.2...v0.22.0) (2026-09-28)
 
 

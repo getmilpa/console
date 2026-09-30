@@ -27,7 +27,9 @@ use Milpa\Interfaces\Di\DIContainerInterface;
 use Milpa\Console\Identity\AuthorizationLedger;
 use Milpa\Plugin\Contracts\AppRoot;
 use Milpa\ToolRuntime\Identity\FileNonceLedger;
+use Milpa\ToolRuntime\Identity\ExplainsRefusal;
 use Milpa\ToolRuntime\Identity\GnupgSignatureVerifier;
+use Milpa\ToolRuntime\Identity\SignatureRefusal;
 use Milpa\ToolRuntime\Identity\SignatureVerifier;
 use Milpa\ToolRuntime\Identity\GrantedAuthorization;
 use Milpa\ToolRuntime\Identity\OperationAuthorization;
@@ -273,9 +275,12 @@ final class CliRunner
             // fails it refuses: a sequence opened by a seat never widens to the terminal's default
             // because its receipt stopped holding.
             $cited = $this->citeReceipt($op, $sequence, $standing);
-            if (\is_string($cited)) {
-                $out('✗ This call continues a signed sequence, and its receipt no longer holds: ' . $cited . '.');
-                $out('  Nothing ran. Re-run with --sign to open the sequence again under a signature of today.');
+            if (\is_string($cited) || $cited instanceof SignatureRefusal) {
+                // A key missing from the keyring is not a tampered receipt (greenhouse evidence/1071, B9): say
+                // which it was, and the one step that fits it.
+                $why = $cited instanceof SignatureRefusal ? 'its signature does not verify: ' . $cited->sentence() : $cited;
+                $out('✗ This call continues a signed sequence, and its receipt no longer holds: ' . $why . '.');
+                $out('  Nothing ran. ' . ($cited instanceof SignatureRefusal ? $cited->remedy() : 'Re-run with --sign to open the sequence again under a signature of today.'));
 
                 return 1;
             }
@@ -434,18 +439,22 @@ final class CliRunner
      *
      * @param array<string, mixed> $standing
      *
-     * @return array{signer: VerifiedSigner, receipt: string}|string the signer and receipt id, or why not
+     * @return array{signer: VerifiedSigner, receipt: string}|SignatureRefusal|string the signer and receipt id, or why not
      */
-    private function citeReceipt(Operation $op, string $sequence, array $standing): array|string
+    private function citeReceipt(Operation $op, string $sequence, array $standing): array|SignatureRefusal|string
     {
         $payload = $standing['payload'] ?? null;
         $signature = $standing['signature'] ?? null;
         if (!\is_string($payload) || $payload === '' || !\is_string($signature) || $signature === '') {
             return 'the kept receipt carries no signed bytes to re-verify';
         }
-        $signer = ($this->verifier ?? new GnupgSignatureVerifier())->verify($payload, $signature);
+        $verifier = $this->verifier ?? new GnupgSignatureVerifier();
+        $signer = $verifier->verify($payload, $signature);
         if ($signer === null) {
-            return 'its signature does not verify — the receipt was altered, or the key expired or was revoked';
+            // Refused already; the explanation only names which refusal it was, and never grants.
+            $refusal = $verifier instanceof ExplainsRefusal ? $verifier->whyNot($payload, $signature) : null;
+
+            return $refusal ?? 'its signature does not verify — the receipt was altered, or the key expired or was revoked';
         }
         if (($standing['fingerprint'] ?? null) !== $signer->fingerprint) {
             return 'the key it names is not the key that signed it';

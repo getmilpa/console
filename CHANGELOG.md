@@ -1,6 +1,19 @@
 # Changelog
 
 
+## [0.23.0](https://github.com/getmilpa/console/compare/v0.22.3...v0.23.0) (2026-09-30)
+
+
+### Features
+
+* **cli:** a call cites a receipt its operation names, in the same sequence ([#93](https://github.com/getmilpa/console/issues/93)) ([4246569](https://github.com/getmilpa/console/commit/4246569fc776f193516de211b3195e689e4eb6d6))
+
+
+### Bug Fixes
+
+* **cli:** a cited receipt whose key is missing names the key, not a tampering ([#91](https://github.com/getmilpa/console/issues/91)) ([e4bfe9f](https://github.com/getmilpa/console/commit/e4bfe9fcbde306cbe5a0fd1db55d933a16e7dd24))
+* **tui:** coa shell opens an operation on a real terminal ([#92](https://github.com/getmilpa/console/issues/92)) ([7c725c8](https://github.com/getmilpa/console/commit/7c725c8848c51d3f71f94cc0849eb1edfd5da86b))
+
 ## [0.22.3](https://github.com/getmilpa/console/compare/v0.22.2...v0.22.3) (2026-09-30)
 
 

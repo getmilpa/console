@@ -55,7 +55,8 @@ final class SchemaCoercer
         }
 
         foreach ($properties as $name => $spec) {
-            $type = \is_string($spec['type'] ?? null) ? $spec['type'] : 'string';
+            $declared = $spec['type'] ?? null;
+            $type = \is_string($declared) ? $declared : 'string';
 
             if (!\array_key_exists($name, $raw)) {
                 if (\array_key_exists('default', $spec)) {
@@ -67,7 +68,9 @@ final class SchemaCoercer
             }
 
             try {
-                $value = $this->coerceValue($raw[$name], $type, $spec);
+                $value = \is_array($declared) && $declared !== []
+                    ? $this->coerceToOneOf($raw[$name], array_values(array_filter($declared, \is_string(...))), $spec)
+                    : $this->coerceValue($raw[$name], $type, $spec);
             } catch (\InvalidArgumentException $e) {
                 $errors[] = "field '{$name}': " . $e->getMessage();
                 continue;
@@ -86,6 +89,53 @@ final class SchemaCoercer
         }
 
         return $out;
+    }
+
+    /**
+     * A declared LIST of JSON types (`"type": ["string", "object", …]`) admits a value of any of them.
+     *
+     * HTTP has already decoded its body, so a `true`, a `3` or an object arrives as itself and is kept
+     * when its JSON type is on the list. Read with the single-type fallback, the list became `string`:
+     * a JSON `true` reached the operation as `"1"` and an object was refused outright (greenhouse
+     * evidence/1059). Text stays text when the list admits strings, because argv has no other spelling
+     * and the operation that declared the list is the one that reads it. Anything else is tried
+     * against the listed types in the order they are declared.
+     *
+     * @param list<string>         $types
+     * @param array<string, mixed> $spec
+     */
+    private function coerceToOneOf(mixed $raw, array $types, array $spec): mixed
+    {
+        if (\is_string($raw) ? \in_array('string', $types, true) : array_intersect($this->jsonTypesOf($raw), $types) !== []) {
+            return $raw;
+        }
+
+        foreach (array_intersect($types, ['integer', 'number', 'boolean', 'object', 'array', 'string']) as $type) {
+            try {
+                return $this->coerceValue($raw, $type, $spec);
+            } catch (\InvalidArgumentException) {
+            }
+        }
+
+        throw new \InvalidArgumentException('expected one of: ' . implode(', ', $types));
+    }
+
+    /**
+     * The JSON types a decoded value can be read as — an empty PHP array is both `[]` and `{}`.
+     *
+     * @return list<string>
+     */
+    private function jsonTypesOf(mixed $value): array
+    {
+        return match (true) {
+            $value === null => ['null'],
+            \is_bool($value) => ['boolean'],
+            \is_int($value) => ['integer', 'number'],
+            \is_float($value) => ['number'],
+            $value === [] => ['array', 'object'],
+            \is_array($value) => array_is_list($value) ? ['array'] : ['object'],
+            default => [],
+        };
     }
 
     /** @param array<string, mixed> $spec */

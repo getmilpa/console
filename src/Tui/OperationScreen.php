@@ -88,8 +88,7 @@ final class OperationScreen
             $this->valores[$campo['nombre']] = '';
         }
 
-        $ids = array_column($this->campos, 'id');
-        $ids[] = 'correr';
+        $ids = $this->focusOrder();
 
         $this->loop = new RetainedTuiLoop(
             new RetainedTuiRenderer(new SimpleTuiLayoutEngine(), self::renderers()),
@@ -133,6 +132,27 @@ final class OperationScreen
     public function press(string $key): bool
     {
         return $this->loop->dispatchKey($key);
+    }
+
+    /**
+     * The ids focus moves through, in order: one per field, then the run line.
+     *
+     * A screen that shows this form inside its own loop ({@see OperationsScreen}) takes this order for itself, so
+     * Tab — which a loop resolves before any screen hears it — moves between these fields and not along a list.
+     *
+     * @return list<string>
+     */
+    public function focusOrder(): array
+    {
+        return [...array_column($this->campos, 'id'), 'correr'];
+    }
+
+    /**
+     * The form as a tree, for a loop that paints it — its own, or the shell's that opened it.
+     */
+    public function node(): TuiNode
+    {
+        return $this->tree();
     }
 
     /**

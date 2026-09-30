@@ -94,9 +94,15 @@ final class OperationsScreen
             // Sin `q` entre las teclas de salida: el default del tier la incluye —lo que un dashboard
             // quiere— y aquí se teclea texto. Con ella, una `q` escrita en un campo cerraba la
             // pantalla en vez de escribirse, y no había forma de teclear «query» ni «plugin».
-            quitKeys: ['escape', 'ctrl+c'],
+            // Without Escape either: a loop stops on a quit key before any screen hears it, and Escape means «back»
+            // while a form is open. {@see self::handleKey()} stops the loop on Escape only from the list.
+            quitKeys: ['ctrl+c'],
         );
+        $this->ids = $ids;
     }
+
+    /** @var list<string> the list's focus order, given back when a form closes */
+    private array $ids;
 
     private static function renderers(): TuiNodeRendererRegistry
     {
@@ -116,25 +122,19 @@ final class OperationsScreen
     /** La pantalla que se está viendo: la lista, o la operación abierta. */
     public function render(): string
     {
-        return $this->abierta?->render() ?? $this->loop->renderScreen();
+        return $this->loop->renderScreen();
     }
 
-    /** Manda una tecla a donde corresponda: a la operación abierta, o a la lista. */
+    /**
+     * Manda una tecla, como si alguien la hubiera tecleado — by the same loop a terminal drives.
+     *
+     * 🚨 ONE PATH. Up to 0.22.3 this method routed keys to the open operation itself, and the loop `coa shell` runs
+     * on a terminal did not: Enter "opened" a form the terminal never painted, and the list kept every key after it
+     * (greenhouse evidence/1060, t-0053). Every test drove this method, so every test passed. Now this method only
+     * hands the key to the loop, and the loop is what knows a form is open.
+     */
     public function press(string $key): bool
     {
-        if ($this->abierta !== null) {
-            // Escape cierra y vuelve a la lista. Sin una salida clara, un TUI que entra en algo es
-            // una trampa — y ctrl+c mata el proceso en vez de cerrar la pantalla.
-            if ($key === 'escape') {
-                $this->abierta = null;
-                $this->nombreAbierta = null;
-
-                return true;
-            }
-
-            return $this->abierta->press($key);
-        }
-
         return $this->loop->dispatchKey($key);
     }
 
@@ -154,9 +154,36 @@ final class OperationsScreen
         return $this->operaciones;
     }
 
-    /** Enter abre la operación enfocada. El movimiento lo resuelve el tier. */
+    /**
+     * With a form open, every key is the form's; on the list, Enter opens the focused operation and Escape leaves.
+     *
+     * The form keeps its own loop for its fields and its run, and this loop only lends it the terminal: the form's
+     * fields become this loop's focus order (Tab never reaches a screen — the loop moves focus first), the form is
+     * told which field has the focus, and it receives the key exactly as it arrived.
+     */
     private function handleKey(string $key, RetainedTuiLoop $loop): bool
     {
+        if ($this->abierta !== null) {
+            // Escape cierra y vuelve a la lista. Sin una salida clara, un TUI que entra en algo es
+            // una trampa — y ctrl+c mata el proceso en vez de cerrar la pantalla.
+            if ($key === 'escape') {
+                $this->cerrar($loop);
+
+                return true;
+            }
+            $this->abierta->loop()->focus($loop->focusedId());
+            $this->abierta->press($loop->lastRawKey());
+
+            return true;
+        }
+
+        if ($key === 'escape') {
+            // The loop has no stop of its own: its quit key is the one way to end it.
+            $loop->dispatchKey('ctrl+c');
+
+            return true;
+        }
+
         if ($key !== 'enter') {
             return false;
         }
@@ -166,6 +193,9 @@ final class OperationsScreen
             if ('op:' . $operacion->name === $enfocado) {
                 $this->abierta = new OperationScreen($operacion, $this->container, $this->width, $this->height, $this->ansi, dispatcher: $this->dispatcher);
                 $this->nombreAbierta = $operacion->name;
+                $orden = $this->abierta->focusOrder();
+                $loop->setFocusOrder($orden);
+                $loop->focus($orden[0]);
 
                 return true;
             }
@@ -174,8 +204,24 @@ final class OperationsScreen
         return false;
     }
 
+    /** Back to the list, with the focus on the operation that was open. */
+    private function cerrar(RetainedTuiLoop $loop): void
+    {
+        $nombre = $this->nombreAbierta;
+        $this->abierta = null;
+        $this->nombreAbierta = null;
+        $loop->setFocusOrder($this->ids);
+        $loop->focus('op:' . $nombre);
+    }
+
     private function tree(): TuiNode
     {
+        if ($this->abierta !== null) {
+            $this->abierta->loop()->focus($this->loop->focusedId());
+
+            return $this->abierta->node();
+        }
+
         $enfocado = $this->loop->focusedId();
         $hijos = [];
 

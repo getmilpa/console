@@ -23,10 +23,12 @@ use Milpa\Console\SequenceReceipts;
 use Milpa\Console\Testing\SignsOperations;
 use Milpa\Interfaces\Di\DIContainerInterface;
 use Milpa\ToolRuntime\Contracts\ToolContext;
+use Milpa\ToolRuntime\Identity\ExplainsRefusal;
 use Milpa\ToolRuntime\Identity\GrantedAuthorization;
 use Milpa\ToolRuntime\Identity\NonceLedger;
 use Milpa\ToolRuntime\Identity\OperationAuthorization;
 use Milpa\ToolRuntime\Identity\OperationAuthorizer;
+use Milpa\ToolRuntime\Identity\SignatureRefusal;
 use Milpa\ToolRuntime\Identity\SignatureVerifier;
 use Milpa\ToolRuntime\Identity\VerifiedSigner;
 use PHPUnit\Framework\TestCase;
@@ -297,6 +299,81 @@ final class CliSequenceReceiptTest extends TestCase
 
         self::assertSame(1, $exit);
         self::assertSame([], $this->calls);
+    }
+
+    /**
+     * A verifier that refuses everything, and — when it can — says which refusal it was.
+     */
+    private function explainingVerifier(?SignatureRefusal $why): SignatureVerifier
+    {
+        return new class ($why) implements SignatureVerifier, ExplainsRefusal {
+            public function __construct(private ?SignatureRefusal $why)
+            {
+            }
+
+            public function verify(string $payload, string $signature): ?VerifiedSigner
+            {
+                return null;
+            }
+
+            public function whyNot(string $payload, string $signature): ?SignatureRefusal
+            {
+                return $this->why;
+            }
+        };
+    }
+
+    /**
+     * B9 (greenhouse evidence/1071, 1077): a receipt whose key is not in this terminal's keyring was
+     * reported as «altered, or the key expired or was revoked» — the one thing it was not. The door
+     * names the key and the keyring, and says the one step that fits.
+     */
+    public function testAReceiptWhoseKeyIsNotInTheKeyringNamesTheKeyAndTheKeyring(): void
+    {
+        $book = $this->book();
+        $this->openSequence($book);
+        $missing = new SignatureRefusal(SignatureRefusal::MISSING_KEY, '870A33C1D7E5F2A9', '/home/rod/.gnupg');
+
+        [$exit, $out] = $this->invoke($this->runner($book, verifier: $this->explainingVerifier($missing)), $this->driver(), ['--session=s1', '--prompt=continue']);
+
+        self::assertSame(1, $exit);
+        self::assertSame([], $this->calls, 'naming the refusal never runs anything');
+        self::assertSame([], $book->citations);
+        self::assertStringContainsString('870A33C1D7E5F2A9', $out);
+        self::assertStringContainsString('/home/rod/.gnupg', $out);
+        self::assertStringContainsString('GNUPGHOME', $out);
+        self::assertStringNotContainsString('altered', $out, 'a missing key is not a tampered receipt');
+        self::assertStringNotContainsString('Re-run with --sign', $out, 'signing again from the wrong keyring fails the same way');
+    }
+
+    /** An altered receipt still says altered, and still asks for a new signature. */
+    public function testAnAlteredReceiptExplainedAsSuchStillAsksForANewSignature(): void
+    {
+        $book = $this->book();
+        $this->openSequence($book);
+
+        [$exit, $out] = $this->invoke($this->runner($book, verifier: $this->explainingVerifier(new SignatureRefusal(SignatureRefusal::ALTERED))), $this->driver(), ['--session=s1', '--prompt=continue']);
+
+        self::assertSame(1, $exit);
+        self::assertSame([], $this->calls);
+        self::assertStringContainsString('the receipt was altered', $out);
+        self::assertStringContainsString('Re-run with --sign', $out);
+    }
+
+    /**
+     * The explanation is asked only after the verifier refused, and never turns a refusal into a
+     * grant: an explainer that has nothing to say leaves the old sentence and nothing runs.
+     */
+    public function testAnExplainerWithNothingToSayKeepsTheRefusalAndTheOldSentence(): void
+    {
+        $book = $this->book();
+        $this->openSequence($book);
+
+        [$exit, $out] = $this->invoke($this->runner($book, verifier: $this->explainingVerifier(null)), $this->driver(), ['--session=s1', '--prompt=continue']);
+
+        self::assertSame(1, $exit);
+        self::assertSame([], $this->calls);
+        self::assertStringContainsString('the receipt was altered, or the key expired or was revoked', $out);
     }
 
     public function testAStoredFingerprintThatIsNotTheSignerIsRefused(): void

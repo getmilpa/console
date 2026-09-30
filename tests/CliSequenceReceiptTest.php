@@ -407,6 +407,134 @@ final class CliSequenceReceiptTest extends TestCase
         self::assertStringContainsString("signed 'agent'", $out);
     }
 
+    /**
+     * An operation that answers inside a session — like `agent:answer` — and, when told, cites the `agent`
+     * receipt that opened it (greenhouse decisions/0526 §2).
+     *
+     * @param list<string> $citesReceiptsOf
+     */
+    private function answer(array $citesReceiptsOf = ['agent'], string $name = 'agent:answer'): Operation
+    {
+        return new Operation(
+            name: $name,
+            description: 'Answer the question that paused a session',
+            handler: function (array $input, ?InvocationContext $context = null, ?ToolContext $authority = null): array {
+                $this->calls[] = [$context, $authority, $input];
+
+                return ['ok' => true];
+            },
+            inputSchema: ['type' => 'object', 'properties' => ['session' => ['type' => 'string'], 'answer' => ['type' => 'string']]],
+            mutating: true,
+            scopes: ['agent:answer'],
+            effects: new EffectProfile(Mutation::Persistent, Externality::None, Reversibility::Irreversible, Authority::WriteAsUser, subject: Subject::Data),
+            continues: static fn (array $a): ?string => \is_string($a['session'] ?? null) ? $a['session'] : null,
+            citesReceiptsOf: $citesReceiptsOf,
+        );
+    }
+
+    /**
+     * A signed chat in ask mode answers its own question: the answer cites the `agent` receipt of THAT
+     * session, runs as its signer, and leaves the receipt standing for the next leg.
+     */
+    public function testAnAnswerCitesTheAgentReceiptOfItsOwnSession(): void
+    {
+        $book = $this->book();
+        $this->openSequence($book);
+        $opening = 'sha256:' . hash('sha256', $book->kept['s1']['payload']);
+
+        [$exit, $out] = $this->invoke($this->runner($book, ['agent:run', 'agent:answer']), $this->answer(), ['--session=s1', '--answer=yes']);
+
+        self::assertSame(0, $exit, $out);
+        self::assertCount(1, $this->calls);
+        [$context, $authority] = $this->calls[0];
+        self::assertSame('key:' . self::SEAT, $context?->actor, 'the signer of the leg, not the terminal');
+        self::assertSame($opening, $context?->authorizationId);
+        self::assertSame('key:' . self::SEAT, $authority?->principal);
+        self::assertSame([['s1', 'agent:answer', $opening]], $book->citations, 'the book records which operation cited it');
+        self::assertArrayHasKey('s1', $book->kept, 'an answer never ends the sequence');
+    }
+
+    /** Only in that session: an `agent` receipt moved to another session is refused for an answer too. */
+    public function testAnAnswerNeverCitesTheReceiptOfAnotherSession(): void
+    {
+        $book = $this->book();
+        $this->openSequence($book, 'other');
+        $book->kept['s1'] = $book->kept['other'];
+
+        [$exit, $out] = $this->invoke($this->runner($book, ['agent:run', 'agent:answer']), $this->answer(), ['--session=s1', '--answer=yes']);
+
+        self::assertSame(1, $exit);
+        self::assertSame([], $this->calls);
+        self::assertStringContainsString('different sequence', $out);
+        self::assertSame([], $book->citations);
+    }
+
+    /** Control: an answer that names no receipt to cite is refused exactly as before 0526 §2. */
+    public function testAnAnswerThatNamesNoReceiptKeepsTheRefusal(): void
+    {
+        $book = $this->book();
+        $this->openSequence($book);
+
+        [$exit, $out] = $this->invoke($this->runner($book, ['agent:run', 'agent:answer']), $this->answer([]), ['--session=s1', '--answer=yes']);
+
+        self::assertSame(1, $exit);
+        self::assertSame([], $this->calls);
+        self::assertStringContainsString("it signed 'agent', not 'agent:answer'", $out);
+    }
+
+    /** It cites what it names and nothing else: a receipt a recipe signed is not an `agent` receipt. */
+    public function testAnAnswerNeverCitesAReceiptItDidNotName(): void
+    {
+        $book = $this->book();
+        $recipe = new Operation(
+            name: 'recipe:apply',
+            description: 'x',
+            handler: static fn (array $i): array => ['ok' => true],
+            inputSchema: ['type' => 'object', 'properties' => ['session' => ['type' => 'string']]],
+            mutating: true,
+            scopes: ['agent:run'],
+            effects: new EffectProfile(Mutation::Persistent, Externality::None, Reversibility::Irreversible, Authority::WriteAsUser, subject: Subject::Data),
+            continues: static fn (array $a): ?string => \is_string($a['session'] ?? null) ? $a['session'] : null,
+        );
+        [$exit] = $this->invoke($this->runner($book), $recipe, ['--session=s1', '--sign']);
+        self::assertSame(0, $exit);
+
+        [$exit, $out] = $this->invoke($this->runner($book, ['agent:run', 'agent:answer']), $this->answer(), ['--session=s1', '--answer=yes']);
+
+        self::assertSame(1, $exit);
+        self::assertSame([], $this->calls);
+        self::assertStringContainsString("it signed 'recipe:apply', not 'agent:answer'", $out);
+    }
+
+    /** The same signer, judged today: a seat whose scopes no longer include answering is refused, never widened. */
+    public function testAnAnswerUnderASignerThatMayNotAnswerIsRefused(): void
+    {
+        $book = $this->book();
+        $this->openSequence($book);
+
+        [$exit, $out] = $this->invoke($this->runner($book, ['agent:run']), $this->answer(), ['--session=s1', '--answer=yes']);
+
+        self::assertSame(1, $exit);
+        self::assertSame([], $this->calls, 'it does not fall back to the terminal either');
+        self::assertStringContainsString('Missing required scope', $out);
+        self::assertSame([], $book->citations);
+    }
+
+    /** The widening runs one way: an `agent` leg never cites a receipt an answer signed. */
+    public function testALegNeverCitesAReceiptAnAnswerSigned(): void
+    {
+        $book = $this->book();
+        [$exit] = $this->invoke($this->runner($book, ['agent:run', 'agent:answer']), $this->answer(), ['--session=s1', '--answer=yes', '--sign']);
+        self::assertSame(0, $exit);
+        $this->calls = [];
+
+        [$exit, $out] = $this->invoke($this->runner($book), $this->driver(), ['--session=s1', '--prompt=continue']);
+
+        self::assertSame(1, $exit);
+        self::assertSame([], $this->calls);
+        self::assertStringContainsString("it signed 'agent:answer', not 'agent'", $out);
+    }
+
     public function testARevokedEnrollmentIsRefusedAndNeverWidensToTheTerminal(): void
     {
         $book = $this->book();

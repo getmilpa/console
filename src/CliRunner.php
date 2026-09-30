@@ -431,7 +431,8 @@ final class CliRunner
      *
      * Four ways to be wrong, each its own refusal (greenhouse decisions/0500): the bytes were
      * altered or the key no longer signs (gpg answers no GOODSIG for an expired or revoked key); the
-     * stored fingerprint is not the live one; the payload signed another operation or another host;
+     * stored fingerprint is not the live one; the payload signed another operation (one this operation does not
+     * name in {@see Operation::$citesReceiptsOf}) or another host;
      * or the signed arguments name a DIFFERENT sequence — a receipt lifted from another session
      * fails here with no extra machinery, because the binding was signed. Freshness and the nonce
      * are not asked again: this is not the authorization of this call but the citation of the one
@@ -463,7 +464,10 @@ final class CliRunner
         if ($authorization === null) {
             return 'the signed payload is not an operation authorization';
         }
-        if ($authorization->operation !== $op->name) {
+        // Its own operation's receipt, or one the operation NAMES (greenhouse decisions/0526 §2: `agent:answer` names
+        // `agent`, so a signed chat in ask mode answers its own questions). Never the other way round, and never
+        // across sequences: the binding below still applies this operation's own `continues` to what was signed.
+        if (!$op->mayCiteReceiptOf($authorization->operation)) {
             return "it signed '{$authorization->operation}', not '{$op->name}'";
         }
         $host = gethostname() ?: 'unknown-host';

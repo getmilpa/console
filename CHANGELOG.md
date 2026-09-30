@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.22.3](https://github.com/getmilpa/console/compare/v0.22.2...v0.22.3) (2026-09-30)
+
+
+### Bug Fixes
+
+* **coercion:** a declared list of JSON types keeps decoded values as themselves ([#87](https://github.com/getmilpa/console/issues/87)) ([2a81cc9](https://github.com/getmilpa/console/commit/2a81cc98ab842e7c61fb9a6b90c11f3a99bc1253))
+
 ## [0.22.2](https://github.com/getmilpa/console/compare/v0.22.1...v0.22.2) (2026-09-30)
 
 

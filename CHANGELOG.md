@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.22.2](https://github.com/getmilpa/console/compare/v0.22.1...v0.22.2) (2026-09-30)
+
+
+### Bug Fixes
+
+* judge an operation's permission on MCP and for finite CLI callers ([#88](https://github.com/getmilpa/console/issues/88)) ([7d3a1b9](https://github.com/getmilpa/console/commit/7d3a1b90ac815843e041085833425b4052c1f772))
+
 ## [0.22.1](https://github.com/getmilpa/console/compare/v0.22.0...v0.22.1) (2026-09-29)
 
 

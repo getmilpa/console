@@ -104,7 +104,7 @@ final class GnupgOperationSigner implements OperationSigner, ExplainsSigningFail
      * The signing call keeps its stderr closed (a passphrase prompt must reach the terminal, not this
      * process), so the reason is read with a second, read-only question: which secret keys does the
      * keyring this terminal reads hold, and can any of them sign? Measured on a new house (greenhouse
-     * evidence/1082): an empty keyring and a declined prompt printed the same two lines, and the first
+     * evidence/1085): an empty keyring and a declined prompt printed the same two lines, and the first
      * person to type `--sign` could not tell which one they had.
      */
     public function whyNotSigned(): SigningFailure

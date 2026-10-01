@@ -233,7 +233,7 @@ final class CliProjectorSignatureGateTest extends TestCase
 
     public function test_a_signer_that_knows_why_says_why_and_the_way_out(): void
     {
-        // The first --sign on a new house usually meets an empty keyring (greenhouse evidence/1082).
+        // The first --sign on a new house usually meets an empty keyring (greenhouse evidence/1085).
         $signer = new class () implements OperationSigner, ExplainsSigningFailure {
             public function sign(string $operation, array $arguments, string $host, int $now): ?array
             {

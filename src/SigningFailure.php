@@ -19,7 +19,7 @@ namespace Milpa\Console;
  *
  * «Nothing was signed» is true in every case and useful in none of them. The first person who runs
  * `--sign` on a new house usually has no key at all, and the sentence that told them «either declined,
- * or no usable key» made them guess which (greenhouse decisions/0548). This names the case the signer
+ * or no usable key» made them guess which (greenhouse decisions/0551). This names the case the signer
  * could tell apart. It never authorizes anything: it is read only after the call was already refused.
  */
 final readonly class SigningFailure

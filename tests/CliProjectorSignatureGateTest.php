@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace Milpa\Console\Tests;
 
 use Milpa\Console\CliRunner;
+use Milpa\Console\ExplainsSigningFailure;
+use Milpa\Console\SigningFailure;
 use Milpa\Console\OperationSigner;
 use Milpa\Command\Effect\Authority;
 use Milpa\Command\Effect\EffectProfile;
@@ -225,6 +227,37 @@ final class CliProjectorSignatureGateTest extends TestCase
         self::assertSame(1, $exit);
         self::assertNull($this->ranWith);
         self::assertStringContainsString('Nothing was signed', $this->printed());
+        // A signer that cannot explain keeps the sentence it always printed.
+        self::assertStringContainsString('Either the signature was declined, or no usable key was found.', $this->printed());
+    }
+
+    public function test_a_signer_that_knows_why_says_why_and_the_way_out(): void
+    {
+        // The first --sign on a new house usually meets an empty keyring (greenhouse evidence/1082).
+        $signer = new class () implements OperationSigner, ExplainsSigningFailure {
+            public function sign(string $operation, array $arguments, string $host, int $now): ?array
+            {
+                return null;
+            }
+
+            public function whyNotSigned(): ?SigningFailure
+            {
+                return new SigningFailure(SigningFailure::NO_KEY, 'No key that can sign is in the keyring this terminal reads (/k).', [
+                    'Create one once, then run the same command again:',
+                    '  gpg --quick-gen-key …',
+                ]);
+            }
+        };
+
+        $exit = $this->project(new CliRunner(signer: $signer), ['--name=MailPlugin', '--sign']);
+
+        self::assertSame(1, $exit);
+        self::assertNull($this->ranWith);
+        $printed = $this->printed();
+        self::assertStringContainsString('✗ Nothing was signed, so nothing was authorized.', $printed);
+        self::assertStringContainsString('  No key that can sign is in the keyring this terminal reads (/k).', $printed);
+        self::assertStringContainsString('    gpg --quick-gen-key …', $printed);
+        self::assertStringNotContainsString('Either the signature was declined', $printed);
     }
 
     public function test_an_expired_authorization_stops_the_operation_and_says_what_to_do(): void

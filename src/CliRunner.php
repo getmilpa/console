@@ -125,12 +125,24 @@ final class CliRunner
         $host = gethostname() ?: 'unknown-host';
         $now = time();
 
-        $signed = ($this->signer ?? new GnupgOperationSigner())->sign($op->name, $input, $host, $now);
+        $signer = $this->signer ?? new GnupgOperationSigner();
+        $signed = $signer->sign($op->name, $input, $host, $now);
         if ($signed === null) {
             // Declining at the card lands here, and so does a missing key. Both mean the operation
-            // does not run, and neither is an error in the operation.
+            // does not run, and neither is an error in the operation. A signer that can tell them
+            // apart says which, and the one way out (greenhouse decisions/0551): on a new house the
+            // usual case is no key at all, and «declined, or no key» left that person guessing.
             $out('✗ Nothing was signed, so nothing was authorized.');
-            $out('  Either the signature was declined, or no usable key was found.');
+            $why = $signer instanceof ExplainsSigningFailure ? $signer->whyNotSigned() : null;
+            if ($why === null) {
+                $out('  Either the signature was declined, or no usable key was found.');
+
+                return 1;
+            }
+            $out('  ' . $why->reason);
+            foreach ($why->remedy as $line) {
+                $out('  ' . $line);
+            }
 
             return 1;
         }

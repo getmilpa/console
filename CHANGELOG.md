@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.24.0](https://github.com/getmilpa/console/compare/v0.23.0...v0.24.0) (2026-10-01)
+
+
+### Features
+
+* --sign says why nothing was signed and the one way out ([#95](https://github.com/getmilpa/console/issues/95)) ([8d1761a](https://github.com/getmilpa/console/commit/8d1761abfd853dcda1f1ad44a23bd55ad208df9f))
+
 ## [0.23.0](https://github.com/getmilpa/console/compare/v0.22.3...v0.23.0) (2026-09-30)
 
 

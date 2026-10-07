@@ -1,6 +1,17 @@
 # Changelog
 
 
+## [0.25.0](https://github.com/getmilpa/console/compare/v0.24.0...v0.25.0) (2026-10-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* over HTTP an operation that answered no is a 409, not a 201 or a 200 ([#98](https://github.com/getmilpa/console/issues/98))
+
+### Bug Fixes
+
+* over HTTP an operation that answered no is a 409, not a 201 or a 200 ([#98](https://github.com/getmilpa/console/issues/98)) ([8a1ad1d](https://github.com/getmilpa/console/commit/8a1ad1dc601ee3b40aed4d0343b2b621e7091507))
+
 ## [0.24.0](https://github.com/getmilpa/console/compare/v0.23.0...v0.24.0) (2026-10-01)
 
 

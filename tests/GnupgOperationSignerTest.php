@@ -54,7 +54,7 @@ final class GnupgOperationSignerTest extends TestCase
     {
         $signer = new GnupgOperationSigner($this->gpgPrinting("-----BEGIN PGP SIGNATURE-----\nx\n-----END PGP SIGNATURE-----"));
 
-        $result = $signer->sign('plugins.remove', ['name' => 'MailPlugin'], 'cm4070', 1_800_000_000);
+        $result = $signer->sign('plugins.remove', ['name' => 'MailPlugin'], 'workstation', 1_800_000_000);
 
         self::assertNotNull($result);
         [$payload, $signature] = $result;
@@ -65,7 +65,7 @@ final class GnupgOperationSignerTest extends TestCase
         $authorization = OperationAuthorization::fromCanonical($payload);
         self::assertSame('plugins.remove', $authorization?->operation);
         self::assertSame(['name' => 'MailPlugin'], $authorization?->arguments);
-        self::assertSame('cm4070', $authorization?->host);
+        self::assertSame('workstation', $authorization?->host);
     }
 
     public function test_a_declined_signature_authorizes_nothing(): void
@@ -74,14 +74,14 @@ final class GnupgOperationSignerTest extends TestCase
         // removed, no key exists. All the same answer.
         $signer = new GnupgOperationSigner($this->gpgPrinting('gpg: signing failed: Operation cancelled'));
 
-        self::assertNull($signer->sign('plugins.remove', ['name' => 'MailPlugin'], 'cm4070', 1_800_000_000));
+        self::assertNull($signer->sign('plugins.remove', ['name' => 'MailPlugin'], 'workstation', 1_800_000_000));
     }
 
     public function test_a_missing_binary_authorizes_nothing(): void
     {
         $signer = new GnupgOperationSigner('/nonexistent/gpg');
 
-        self::assertNull($signer->sign('plugins.remove', [], 'cm4070', 1_800_000_000));
+        self::assertNull($signer->sign('plugins.remove', [], 'workstation', 1_800_000_000));
     }
 
     /** A fake gpg that refuses to sign and answers `--list-secret-keys` with the given colon listing. */
@@ -98,7 +98,7 @@ final class GnupgOperationSignerTest extends TestCase
     public function test_an_empty_keyring_says_there_is_no_key_and_how_to_make_one(): void
     {
         $signer = new GnupgOperationSigner($this->gpgListing(''));
-        self::assertNull($signer->sign('plugins.remove', [], 'cm4070', 1_800_000_000));
+        self::assertNull($signer->sign('plugins.remove', [], 'workstation', 1_800_000_000));
 
         $why = $signer->whyNotSigned();
 
@@ -182,13 +182,13 @@ final class GnupgOperationSignerTest extends TestCase
         putenv('GNUPGHOME=' . $home);
         try {
             $signer = new GnupgOperationSigner();
-            self::assertNull($signer->sign('plugins.remove', [], 'cm4070', 1_800_000_000));
+            self::assertNull($signer->sign('plugins.remove', [], 'workstation', 1_800_000_000));
             self::assertSame(SigningFailure::NO_KEY, $signer->whyNotSigned()?->kind);
 
             // A key with a passphrase gpg is forbidden to ask for: present, and still no signature.
             shell_exec("gpg --batch --passphrase lab --pinentry-mode loopback --quick-gen-key 'lab <lab@localhost>' ed25519 sign never 2>/dev/null");
             file_put_contents($home . '/gpg.conf', "pinentry-mode error\n");
-            self::assertNull($signer->sign('plugins.remove', [], 'cm4070', 1_800_000_000));
+            self::assertNull($signer->sign('plugins.remove', [], 'workstation', 1_800_000_000));
             self::assertSame(SigningFailure::NOT_GIVEN, $signer->whyNotSigned()?->kind);
         } finally {
             shell_exec('gpgconf --homedir ' . escapeshellarg($home) . ' --kill gpg-agent 2>/dev/null');
@@ -204,8 +204,8 @@ final class GnupgOperationSignerTest extends TestCase
         // twice.
         $signer = new GnupgOperationSigner($this->gpgPrinting("-----BEGIN PGP SIGNATURE-----\nx\n-----END PGP SIGNATURE-----"));
 
-        $first = $signer->sign('plugins.remove', ['name' => 'MailPlugin'], 'cm4070', 1_800_000_000);
-        $second = $signer->sign('plugins.remove', ['name' => 'MailPlugin'], 'cm4070', 1_800_000_000);
+        $first = $signer->sign('plugins.remove', ['name' => 'MailPlugin'], 'workstation', 1_800_000_000);
+        $second = $signer->sign('plugins.remove', ['name' => 'MailPlugin'], 'workstation', 1_800_000_000);
 
         self::assertNotSame(
             OperationAuthorization::fromCanonical((string) $first[0])?->nonce,
@@ -219,7 +219,7 @@ final class GnupgOperationSignerTest extends TestCase
         $before = (array) glob(sys_get_temp_dir() . '/milpa-authz-*');
 
         $signer = new GnupgOperationSigner($this->gpgPrinting('not a signature'));
-        $signer->sign('plugins.remove', ['name' => 'MailPlugin'], 'cm4070', 1_800_000_000);
+        $signer->sign('plugins.remove', ['name' => 'MailPlugin'], 'workstation', 1_800_000_000);
 
         self::assertSame(\count($before), \count((array) glob(sys_get_temp_dir() . '/milpa-authz-*')));
     }

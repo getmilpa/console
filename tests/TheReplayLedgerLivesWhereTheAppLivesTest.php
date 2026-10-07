@@ -155,7 +155,7 @@ final class TheReplayLedgerLivesWhereTheAppLivesTest extends TestCase
             verifier: new class () implements SignatureVerifier {
                 public function verify(string $payload, string $signature): ?VerifiedSigner
                 {
-                    return new VerifiedSigner('BE7554E982E2CA5A0213B6067D72DEBDA1D36D34', 'Test Operator <test@example.com>');
+                    return new VerifiedSigner('AAAA1111BBBB2222CCCC3333DDDD4444EEEE5555', 'Test Operator <test@example.com>');
                 }
             },
         );

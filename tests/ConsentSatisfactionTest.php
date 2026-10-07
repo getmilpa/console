@@ -79,7 +79,7 @@ final class ConsentSatisfactionTest extends TestCase
     {
         $sinPrueba = new ConsentGrant(
             operation: new OperationId('capabilities.enable'),
-            principal: 'cli:rod@cm4070',
+            principal: 'cli:operator@workstation',
             session: 'ses-A',
             grantedAt: new \DateTimeImmutable(self::AT),
             provenance: 'session.question_answered',
@@ -144,7 +144,7 @@ final class ConsentSatisfactionTest extends TestCase
     {
         $ruido = new ConsentGrant(
             operation: new OperationId('config.set'),
-            principal: 'cli:rod@cm4070',
+            principal: 'cli:operator@workstation',
             session: 'ses-A',
             grantedAt: new \DateTimeImmutable(self::AT),
             provenance: 'session.question_answered',

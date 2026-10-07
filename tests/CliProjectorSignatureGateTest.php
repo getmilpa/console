@@ -166,7 +166,7 @@ final class CliProjectorSignatureGateTest extends TestCase
             public function verify(string $payload, string $signature): ?VerifiedSigner
             {
                 return $this->verifies
-                    ? new VerifiedSigner('BE7554E982E2CA5A0213B6067D72DEBDA1D36D34', 'Rodrigo Vicente <rodrigo@teamx.agency>')
+                    ? new VerifiedSigner('AAAA1111BBBB2222CCCC3333DDDD4444EEEE5555', 'Rodrigo Vicente <rodrigo@teamx.agency>')
                     : null;
             }
         };
@@ -321,7 +321,7 @@ final class CliProjectorSignatureGateTest extends TestCase
         self::assertSame('MailPlugin', $this->ranWith['name'] ?? null);
         // Shown before the effect, so a wrong card is caught by the person standing there rather
         // than by an audit weeks later.
-        self::assertStringContainsString('authorized by BE7554E9', $this->printed());
+        self::assertStringContainsString('authorized by AAAA1111', $this->printed());
     }
 
     public function test_a_non_confirmable_operation_is_untouched(): void

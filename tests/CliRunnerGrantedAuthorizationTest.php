@@ -189,7 +189,7 @@ final class CliRunnerGrantedAuthorizationTest extends TestCase
         self::assertSame($this->signedSignature, $granted->signature);
 
         // The signer is the verdict's — the key the accepting verifier established, not a retelling.
-        self::assertSame('BE7554E982E2CA5A0213B6067D72DEBDA1D36D34', $granted->signer->fingerprint);
+        self::assertSame('AAAA1111BBBB2222CCCC3333DDDD4444EEEE5555', $granted->signer->fingerprint);
 
         // The parsed claim rides along and names this very call. A schema-less operation signs its
         // raw bag, and the bag carries the `--sign` token itself — pinned as-is, because the claim

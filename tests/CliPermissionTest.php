@@ -129,7 +129,7 @@ final class CliPermissionTest extends TestCase
         self::assertSame(0, $exit, $out);
         self::assertSame(1, $this->ran);
         self::assertNotEmpty($judge->asked);
-        self::assertSame('key:BE7554E982E2CA5A0213B6067D72DEBDA1D36D34', $judge->asked[0]['caller']->principal);
+        self::assertSame('key:AAAA1111BBBB2222CCCC3333DDDD4444EEEE5555', $judge->asked[0]['caller']->principal);
     }
 
     public function test_a_finite_caller_authority_is_judged_without_signing(): void

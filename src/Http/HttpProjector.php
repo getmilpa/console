@@ -70,9 +70,25 @@ use Psr\Log\LoggerInterface;
  * misma clave al despachar. Si dos plugins registraran su propia instancia, la última ganaría la
  * ranura del contenedor y las rutas de la primera resolverían a una instancia que no conoce su
  * operación — y contestarían 404.
+ *
+ * ── THE STATUS IS READ FROM THE ANSWER ─────────────────────────────────────────────────────────
+ *
+ * What an operation answered decides its status: 201/200 by its declaration when it answered, and
+ * {@see self::ANSWERED_NO} when what it answered is a negative verdict — a boolean `ok: false` at the root of its
+ * result, the convention {@see OperationRunner::verdict()} owns and the terminal's exit code already honours. The
+ * body is the operation's own either way.
  */
 final class HttpProjector implements SurfaceProjector
 {
+    /**
+     * The status of an operation that RAN and answered no.
+     *
+     * 409, not 422: 422 is this projector's «the input did not fit the schema», and a caller has to be able to tell
+     * «fix your request» from «the house said no». Not 403 either — the projector cannot know whether the refusal
+     * was about authority, and the door's own 403 means the call never reached the operation.
+     */
+    public const int ANSWERED_NO = 409;
+
     /** @var array<string, Operation> keyed by operation name */
     private array $operations = [];
 
@@ -239,6 +255,15 @@ final class HttpProjector implements SurfaceProjector
             return $this->json(409, ['error' => $e->getMessage(), 'code' => 'MILPA_OPERATION_STOPPED']);
         } catch (\Throwable $e) {
             return $this->failed($request, $op, $e);
+        }
+
+        // WHAT IT ANSWERED DECIDES THE STATUS, NOT HOW IT WAS DECLARED (greenhouse decisions/0583). An operation
+        // that ran and answered `ok: false` said no: 409, with its own body untouched — the status says the house
+        // refused, the body says why, and never the other way round. The rule is the runner's, the one the terminal
+        // exits 1 on. 422 stays «the input did not fit the schema», so a caller can tell «fix your request» from
+        // «the house said no»; and the 409 above, of a call a listener stopped, carries no `ok` to mistake it for.
+        if (!OperationRunner::verdict($data)) {
+            return $this->json(self::ANSWERED_NO, $data);
         }
 
         return $this->json($op->mutating ? 201 : 200, $data);

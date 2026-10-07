@@ -142,6 +142,23 @@ rather than running unguarded. It stays a 500 and never a 401/403 — the caller
 host declared something protected and left it without a guard. An operation that declares neither
 scopes nor a permission never touches any of this.
 
+**What an operation answered decides the status.** The body is always the operation's own:
+
+| the call | status | body |
+|---|---|---|
+| the operation answered | `201` if it mutates, `200` if it reads | its result |
+| the operation ran and answered **no** — a boolean `ok: false` at the root of its result | `409` | its result, untouched |
+| the input did not fit the declared schema | `422` | `{errors}` |
+| a mutating operation that asks for consent, first call | `428` | `{requires_confirmation, confirm_token}` |
+| a listener stopped it before it ran | `409` | `{error, code: "MILPA_OPERATION_STOPPED"}` — no `ok` |
+| the operation threw | `500` | `{ok: false, error: "internal_error", reference}` — the message stays in the log |
+
+`ok: false` is the verdict `OperationRunner::verdict()` reads for every surface — the terminal exits 1
+on it — so over HTTP a refusal is no longer a `201`: a client that looks only at the status
+(`curl -f`, `fetch`'s `response.ok`, a CI) sees that the house said no, and one that reads the body
+finds the same sentence it always found. `409` and not `422`, so a caller can tell «fix your request»
+from «the house answered no». A result with no `ok`, or an `ok` that is not a boolean, is not a verdict.
+
 When an HTTP operation delegates work to tools, its handler can accept a third optional argument,
 `?Milpa\ToolRuntime\Contracts\ToolContext $authority`. The projector builds it from the authenticated request
 and `OperationRunner` carries it alongside the second argument, `InvocationContext`. Attribution

@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.25.1](https://github.com/getmilpa/console/compare/v0.25.0...v0.25.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* the testing signer and the tests carry a made-up fingerprint, host and home ([#101](https://github.com/getmilpa/console/issues/101)) ([7868b84](https://github.com/getmilpa/console/commit/7868b84cc1c677d472e2caba3893fa73d8236d2a))
+
 ## [0.25.0](https://github.com/getmilpa/console/compare/v0.24.0...v0.25.0) (2026-10-07)
 
 

@@ -332,14 +332,14 @@ final class CliSequenceReceiptTest extends TestCase
     {
         $book = $this->book();
         $this->openSequence($book);
-        $missing = new SignatureRefusal(SignatureRefusal::MISSING_KEY, '870A33C1D7E5F2A9', '/home/operator/.gnupg');
+        $missing = new SignatureRefusal(SignatureRefusal::MISSING_KEY, 'ABCD1234ABCD1234', '/home/operator/.gnupg');
 
         [$exit, $out] = $this->invoke($this->runner($book, verifier: $this->explainingVerifier($missing)), $this->driver(), ['--session=s1', '--prompt=continue']);
 
         self::assertSame(1, $exit);
         self::assertSame([], $this->calls, 'naming the refusal never runs anything');
         self::assertSame([], $book->citations);
-        self::assertStringContainsString('870A33C1D7E5F2A9', $out);
+        self::assertStringContainsString('ABCD1234ABCD1234', $out);
         self::assertStringContainsString('/home/operator/.gnupg', $out);
         self::assertStringContainsString('GNUPGHOME', $out);
         self::assertStringNotContainsString('altered', $out, 'a missing key is not a tampered receipt');

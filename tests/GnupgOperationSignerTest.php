@@ -121,13 +121,13 @@ final class GnupgOperationSignerTest extends TestCase
     {
         // The mutation control of the scan: the same listing with the key valid flips NO_KEY to NOT_GIVEN.
         $signer = new GnupgOperationSigner($this->gpgListing(
-            "sec:u:255:22:AAAA:1:::u:::scSC:::+:::ed25519:::0:\nuid:u::::1::X::Rod <rod@x>::::::::::0:",
+            "sec:u:255:22:AAAA:1:::u:::scSC:::+:::ed25519:::0:\nuid:u::::1::X::Operator <operator@example.com>::::::::::0:",
         ));
 
         $why = $signer->whyNotSigned();
 
         self::assertSame(SigningFailure::NOT_GIVEN, $why?->kind);
-        self::assertStringStartsWith('Rod <rod@x> can sign', $why->reason);
+        self::assertStringStartsWith('Operator <operator@example.com> can sign', $why->reason);
     }
 
     public function test_a_key_that_cannot_sign_is_no_key(): void

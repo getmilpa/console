@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.25.2](https://github.com/getmilpa/console/compare/v0.25.1...v0.25.2) (2026-10-13)
+
+
+### Bug Fixes
+
+* **tui:** the shell form runs an authoring op with the token's authority ([#105](https://github.com/getmilpa/console/issues/105)) ([ad03d85](https://github.com/getmilpa/console/commit/ad03d8502a841af76f43dbc4d1593d89750d6dea))
+
 ## [0.25.1](https://github.com/getmilpa/console/compare/v0.25.0...v0.25.1) (2026-10-07)
 
 

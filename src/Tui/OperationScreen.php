@@ -82,6 +82,10 @@ final class OperationScreen
         private readonly SchemaCoercer $coercer = new SchemaCoercer(),
         private readonly CliRenderer $renderer = new PlainTextCliRenderer(),
         private readonly ?\Milpa\Interfaces\Event\MilpaEventDispatcherInterface $dispatcher = null,
+        // N-1 (greenhouse CH, hueco C): the authority of the session's presented token. The form used to run with
+        // none, so the authoring policy fell to the local wildcard and `test`/`make` ran IN THE HOUSE unconfined;
+        // passing the token's context, as the terminal does, makes the policy confine a finite principal.
+        private readonly ?\Milpa\ToolRuntime\Contracts\ToolContext $authority = null,
     ) {
         $this->campos = $this->camposDe($operacion);
         foreach ($this->campos as $campo) {
@@ -264,7 +268,7 @@ final class OperationScreen
         }
 
         try {
-            $resultado = (new OperationRunner($this->container, $this->dispatcher))->run($this->operacion, $entrada, 'tui');
+            $resultado = (new OperationRunner($this->container, $this->dispatcher))->run($this->operacion, $entrada, 'tui', null, $this->authority);
         } catch (\Throwable $e) {
             $this->estado = 'corrida';
             $this->ok = false;

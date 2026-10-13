@@ -64,6 +64,9 @@ final class OperationsScreen
         private readonly bool $ansi = true,
         private readonly ?\Milpa\Interfaces\Event\MilpaEventDispatcherInterface $dispatcher = null,
         ?ScreenLabels $labels = null,
+        // N-1 (greenhouse CH, hueco C): the session's presented-token authority, forwarded to each OperationScreen
+        // so the form runs with the token's context and the authoring policy confines a finite principal.
+        private readonly ?\Milpa\ToolRuntime\Contracts\ToolContext $authority = null,
     ) {
         $this->labels = $labels ?? new ScreenLabels();
         // Reading first and changing second, which is the order in which someone decides: you look
@@ -191,7 +194,7 @@ final class OperationsScreen
         $enfocado = $loop->focusedId();
         foreach ($this->operaciones as $operacion) {
             if ('op:' . $operacion->name === $enfocado) {
-                $this->abierta = new OperationScreen($operacion, $this->container, $this->width, $this->height, $this->ansi, dispatcher: $this->dispatcher);
+                $this->abierta = new OperationScreen($operacion, $this->container, $this->width, $this->height, $this->ansi, dispatcher: $this->dispatcher, authority: $this->authority);
                 $this->nombreAbierta = $operacion->name;
                 $orden = $this->abierta->focusOrder();
                 $loop->setFocusOrder($orden);
